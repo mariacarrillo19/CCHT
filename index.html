@@ -1,0 +1,92 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCHT Practice Quiz</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+    h1 { text-align: center; }
+    .question { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
+    button { padding: 10px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1>CCHT Practice Quiz</h1>
+
+<div id="quiz"></div>
+
+<button onclick="submitQuiz()">Submit</button>
+
+<div id="results"></div>
+
+<script>
+const questions = [
+    {
+        question: "In hemodialysis, what is the primary purpose of the dialyzer membrane?",
+        options: ["Filter out red blood cells", "Allow diffusion of waste products and prevent large molecules from crossing", "Pump blood", "Add bicarbonate to the blood"],
+        answer: 1,
+        explanation: "The semipermeable membrane in the dialyzer allows small waste molecules (like urea, creatinine) to diffuse across, but keeps large molecules like proteins and blood cells from crossing."
+    },
+    {
+        question: "What is the acceptable total chlorine level in water used for dialysis, according to AAMI standards?",
+        options: ["Less than 0.5 ppm", "Less than 0.1 ppm", "Less than 1.0 ppm", "Exactly 0.0 ppm"],
+        answer: 1,
+        explanation: "AAMI standards require total chlorine (chloramine + free chlorine) to be less than 0.1 ppm to prevent hemolysis."
+    },
+    {
+        question: "Which condition is most likely caused by inadequate heparin during dialysis?",
+        options: ["Clotted dialyzer and bloodlines", "Excessive bleeding post-treatment", "Metabolic alkalosis", "Hypotension"],
+        answer: 0,
+        explanation: "If there is insufficient anticoagulation, clotting can occur in the extracorporeal circuit, leading to treatment interruptions and inadequate dialysis."
+    },
+    {
+        question: "During water treatment, what is the main purpose of the carbon tanks?",
+        options: ["Remove bacteria", "Remove endotoxins", "Remove chlorine and chloramines", "Remove calcium and magnesium"],
+        answer: 2,
+        explanation: "Carbon tanks adsorb chlorine and chloramines to protect patients from hemolysis."
+    },
+    {
+        question: "A patient complains of chest pain and shortness of breath during dialysis. What should you do first?",
+        options: ["Stop the blood pump", "Increase dialysate flow", "Continue and monitor", "Give saline bolus immediately"],
+        answer: 0,
+        explanation: "Chest pain and shortness of breath could indicate serious complications (air embolism, myocardial infarction). Stop the blood pump and follow emergency protocol."
+    }
+];
+
+function buildQuiz() {
+    const quizContainer = document.getElementById('quiz');
+    questions.forEach((q, i) => {
+        const div = document.createElement('div');
+        div.classList.add('question');
+        div.innerHTML = `<p><strong>Q${i+1}:</strong> ${q.question}</p>` +
+            q.options.map((opt, idx) => 
+                `<label><input type="radio" name="q${i}" value="${idx}"> ${opt}</label><br>`
+            ).join('');
+        quizContainer.appendChild(div);
+    });
+}
+
+function submitQuiz() {
+    let score = 0;
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '';
+    questions.forEach((q, i) => {
+        const selected = document.querySelector(`input[name="q${i}"]:checked`);
+        if (selected && parseInt(selected.value) === q.answer) {
+            score++;
+            resultsDiv.innerHTML += `<p>Q${i+1}: ✅ Correct! ${q.explanation}</p>`;
+        } else {
+            resultsDiv.innerHTML += `<p>Q${i+1}: ❌ Incorrect. ${q.explanation}</p>`;
+        }
+    });
+    resultsDiv.innerHTML = `<h2>Your Score: ${score}/${questions.length}</h2>` + resultsDiv.innerHTML;
+}
+
+buildQuiz();
+</script>
+
+</body>
+</html>
