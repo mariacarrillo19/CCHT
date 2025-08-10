@@ -1,0 +1,214 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CCHT Study Coach — Hard + Booster</title>
+<style>
+:root{--bg:#0b1220;--card:#0f172a;--ink:#e5e7eb;--muted:#94a3b8;--pri:#60a5fa;--ok:#22c55e;--bad:#ef4444;--chip:#1f2937}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto}
+.container{max-width:920px;margin:0 auto;padding:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.card{background:var(--card);border:1px solid #233047;border-radius:12px;padding:16px}
+h1{font-size:20px;margin:0 0 10px}
+button{background:var(--pri);color:#0b1220;border:none;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer}
+button.outline{background:transparent;border:1px solid var(--pri);color:var(--pri)}
+.badge,.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:var(--chip);color:#e2e8f0;font-size:12px}
+.small{font-size:13px;color:var(--muted)}.muted{color:var(--muted)}
+.hide{display:none}.list .item{padding:10px 0;border-top:1px solid #1e293b}
+.kpi{display:flex;gap:10px;flex-wrap:wrap}
+.kpi .cell{flex:1;min-width:180px;background:#0c1322;border:1px solid #1d2a3e;border-radius:12px;padding:12px}
+.q-stem{font-weight:700;margin:8px 0}
+.choice{display:flex;gap:10px;align-items:flex-start;border:1px solid #213047;border-radius:10px;padding:10px;margin:8px 0;cursor:pointer}
+.choice .badge{background:#111827}
+.choice.correct{border-color:#14532d;background:rgba(34,197,94,.1)}
+.choice.incorrect{border-color:#7f1d1d;background:rgba(239,68,68,.08)}
+.explain{margin-top:8px;border-left:3px solid #334155;padding-left:10px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.progress{height:8px;background:#111827;border-radius:999px;overflow:hidden}
+.progress>div{height:100%;width:0;background:var(--pri)}
+footer{color:#64748b;margin-top:16px;font-size:12px;text-align:center}
+</style>
+</head><body><div class="container">
+  <div id="home" class="card">
+    <div class="topbar"><h1>CCHT Study Coach</h1><span class="pill" id="modePill">Home</span></div>
+    <div class="muted small" style="margin:8px 0">Modes: <b>Daily 10</b> (quick), <b>Full Mock</b> (balanced), <b>Hard</b> (exam-style), <b>Booster</b> (your missed items).</div>
+    <div class="row" style="margin:10px 0">
+      <button id="btnDaily">Daily 10</button>
+      <button id="btnMock">Full Mock</button>
+      <button id="btnHardBlueprint" class="outline">Hard · Blueprint</button>
+      <button id="btnHardTech" class="outline">Hard · Tech-Heavy</button>
+      <button id="btnBooster" class="outline">Weak Spot Booster</button>
+    </div>
+    <div class="kpi">
+      <div class="cell"><div class="small">Today answered</div><div style="font-size:22px" id="todayKpi">0</div></div>
+      <div class="cell"><div class="small">Weak spots saved</div><div style="font-size:22px" id="weakKpi">0</div></div>
+      <div class="cell"><div class="small">Best recent</div><div style="font-size:22px" id="bestKpi">—</div></div>
+    </div>
+  </div>
+
+  <div id="quiz" class="card hide">
+    <div class="topbar">
+      <div><span class="pill" id="catPill">Mix</span> <span class="pill" id="countPill"><span id="qNum">1</span>/<span id="qTotal">10</span></span></div>
+      <div class="pill" id="timer">—</div>
+    </div>
+    <div class="progress" style="margin:12px 0 6px"><div id="bar"></div></div>
+    <div id="qArea"></div>
+    <div class="row"><button id="btnNext" class="outline">Next →</button></div>
+  </div>
+
+  <div id="results" class="card hide">
+    <h1>Results</h1>
+    <div id="scoreLine" style="font-size:22px;margin-bottom:10px"></div>
+    <div class="kpi">
+      <div class="cell"><div class="small">Correct</div><div id="kCorrect" style="font-size:22px">0</div></div>
+      <div class="cell"><div class="small">Time</div><div id="kTime" style="font-size:22px">—</div></div>
+      <div class="cell"><div class="small">Mode</div><div id="kMode" style="font-size:22px">—</div></div>
+    </div>
+    <h3>Recent Sessions</h3>
+    <div id="histList" class="list"></div>
+    <div class="row" style="margin-top:12px;"><button onclick="goHome()">Home</button><button class="outline" onclick="retry()">Retry</button></div>
+  </div>
+
+  <footer>Tip: If your browser blocks saving (private mode), the quiz still works but won’t save streaks/bookmarks.</footer>
+</div>
+
+<script>
+// ======= Safe storage (works even if blocked) =======
+function storageAvailable(){try{const x='__t__';localStorage.setItem(x,x);localStorage.removeItem(x);return true}catch(e){return false}}
+const STORAGE_OK = storageAvailable();
+const store={get:(k,f)=>{if(!STORAGE_OK)return f;try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},
+             set:(k,v)=>{if(!STORAGE_OK)return;try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+// ======= Question banks (core + hard) =======
+const BANK=[ // compact high-yield core (add more anytime)
+{id:101,category:'Clinical',stem:'Patient becomes hypotensive (SBP 86) with dizziness during dialysis. First action?',choices:['Increase UF','Stop UF and give 100–200 mL NS','Raise dialysate temp','Call MD and continue'],answer:1,explanation:'Reduce/stop UF and give small NS bolus; reassess, notify RN/MD.'},
+{id:105,category:'Clinical',stem:'Venous pressure alarm rises suddenly. Check first:',choices:['Arterial needle','Dialysate temperature','Return line for kinks/clamps/clots','Bicarbonate jug level'],answer:2,explanation:'Return-side obstruction raises venous pressure.'},
+{id:203,category:'Water',stem:'Max allowable total chlorine (AAMI):',choices:['0.1 mg/L','0.5 mg/L','1.0 mg/L','0.01 mg/L'],answer:0,explanation:'Must be ≤ 0.1 mg/L.'},
+{id:204,category:'Water',stem:'When test total chlorine?',choices:['Daily only','Before first patient and every 4 hours','Weekly','Monthly'],answer:1,explanation:'Start of day and q4h.'},
+{id:302,category:'Machine',stem:'Blood leak alarm with pink effluent means:',choices:['High TMP only','Membrane fiber rupture—stop and change dialyzer','Air in venous chamber','Concentrate mixing error'],answer:1,explanation:'Treat as membrane breach.'},
+{id:111,category:'Clinical',stem:'Minimum handwashing time:',choices:['10 sec','20 sec','45 sec','60 sec'],answer:1,explanation:'≥20 seconds (soap & water).'},
+{id:210,category:'Water',stem:'AAMI maximum bacteria level:',choices:['50 CFU/mL','100 CFU/mL','250 CFU/mL','0 CFU/mL'],answer:1,explanation:'≤100 CFU/mL; endotoxin ≤0.25 EU/mL.'},
+{id:314,category:'Machine',stem:'Prevent air embolism:',choices:['Higher BFR','Air detector on and venous chamber level correct','Smaller dialyzer','Turn off alarms during cannulation'],answer:1,explanation:'Air detector + correct level are key.'},
+{id:114,category:'Clinical',stem:'Fever and chills 1 hour into dialysis suggests:',choices:['Pyrogen reaction from endotoxins','Hemolysis','Air embolism','Dialyzer rupture'],answer:0,explanation:'Think endotoxin/pyrogen.'},
+{id:208,category:'Water',stem:'Hardness detected after softener indicates:',choices:['RO failure','Softener resin exhaustion—regenerate/service','Carbon breakthrough','Loop biofilm'],answer:1,explanation:'Service softener.'},
+];
+const HARD_BANK=[ // realistic exam-style
+{id:9001,category:'Clinical',stem:'Patient is 3.0 kg over dry weight and asks to remove it all in 2 hours. Best FIRST action?',choices:['Agree to finish sooner','Explain risks; plan even UF over full session; consider cool dialysate','Increase sodium and remove faster','Raise BFR to speed UF'],answer:1,explanation:'Aggressive UF ↑ hypotension risk. Even UF over full session is safer.'},
+{id:9002,category:'Clinical',stem:'Venous pressure climbs and return line looks taut. MOST likely:',choices:['Arterial needle against wall','Kink/clot on return side or clamp closed','Wrong dialysate concentrate','Low pump speed'],answer:1,explanation:'Return obstruction → venous pressure ↑.'},
+{id:9101,category:'Water',stem:'Total chlorine after first carbon tank is 0.2 mg/L pre-day. Action?',choices:['Proceed; retest in 4h','Bypass RO','Do NOT start; correct and retest until ≤0.1 mg/L','Add more bicarbonate'],answer:2,explanation:'Above limit: unsafe to dialyze.'},
+{id:9202,category:'Machine',stem:'Blood leak alarm + pink effluent during tx. Next step:',choices:['Continue—sensor error','Stop tx, perform test, replace dialyzer/circuit','Increase dialysate flow','Silence alarm temporarily'],answer:1,explanation:'Assume membrane breach until proven otherwise.'},
+{id:9301,category:'Role',stem:'Patient refuses to continue. MOST appropriate:',choices:['Continue anyway for safety','Educate on risks, document refusal, notify RN/MD','Reduce UF secretly','Ask another patient to convince them'],answer:1,explanation:'Respect autonomy; educate, document, escalate.'},
+{id:9005,category:'Clinical',stem:'Yawning, nausea, cool clammy skin; SBP drops 20 mmHg. FIRST response?',choices:['Increase UF to meet goal','Stop/reduce UF; legs up; consider 100–200 mL NS','Increase dialysate flow','Turn off air detector'],answer:1,explanation:'Early hypotension → reduce/stop UF, support circulation.'},
+{id:9106,category:'Water',stem:'Product water culture is 120 CFU/mL. Response?',choices:['Within limits—continue','Recheck next month','Disinfect/sanitize and retest per policy','Increase RO pressure only'],answer:2,explanation:'Exceeds ≤100 CFU/mL: corrective action + retest.'},
+{id:9201,category:'Machine',stem:'Dialysate temp 38.5°C pre-connection. Best step?',choices:['Start—higher temp okay','Lower to ~36–37°C before starting','Increase sodium then start','Run saline 30 min then start'],answer:1,explanation:'Do not dialyze out-of-range temperature.'},
+];
+const HARD_BY_CAT=HARD_BANK.reduce((a,q)=>{(a[q.category]??=[]).push(q);return a},{});
+
+// ======= State
+const $=sel=>document.querySelector(sel), $$=sel=>Array.from(document.querySelectorAll(sel));
+const WRONG_KEY='ccht_wrong_v1', STATS_KEY='ccht_stats_v1', HIST_KEY='ccht_hist_v1';
+let wrongSet=new Set(store.get(WRONG_KEY,[])); let stats=store.get(STATS_KEY,{answeredToday:0}); let history=store.get(HIST_KEY,[]);
+let session=null;
+
+// ======= Helpers
+function secondsToMMSS(s){const m=Math.floor(s/60),ss=('0'+(s%60)).slice(-2);return `${m}:${ss}`}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+// ======= Session control
+function startSession({mode,pool,size,timeLimit=null}) {
+  session={mode, list: pool.slice(0,size), index:0, correct:0, answers:[], start:Date.now(), timeLimit, ended:false};
+  $('#home').classList.add('hide'); $('#results').classList.add('hide'); $('#quiz').classList.remove('hide');
+  $('#modePill').textContent=mode; $('#catPill').textContent='Mix'; $('#qTotal').textContent=String(size); $('#timer').textContent=timeLimit?secondsToMMSS(timeLimit):'—';
+  showCurrent();
+  if(timeLimit){ const tick=()=>{ if(!session||session.ended) return; const left=timeLimit-Math.floor((Date.now()-session.start)/1000); $('#timer').textContent=secondsToMMSS(Math.max(0,left)); if(left<=0){ finishSession(true); } else setTimeout(tick,1000) }; tick(); }
+}
+function showCurrent(){
+  const q=session.list[session.index]; $('#qNum').textContent=String(session.index+1); $('#bar').style.width=((session.index)/session.list.length*100)+'%';
+  const area=$('#qArea'); area.innerHTML='';
+  const card=document.createElement('div'); card.innerHTML=`
+    <div class="q-stem">${q.stem}</div>
+    ${q.choices.map((c,i)=>`<div class="choice" data-i="${i}"><div class="badge">${String.fromCharCode(65+i)}</div><div>${c}</div></div>`).join('')}
+    <div class="explain small hide" id="explain">${q.explanation}</div>`; area.appendChild(card);
+  $('#status')?.remove();
+  const s=document.createElement('div');s.id='status';s.className='small muted';s.style.marginTop='6px';s.textContent='Pick the single best answer';area.appendChild(s);
+  $$('#qArea .choice').forEach(ch=>ch.addEventListener('click',()=>{
+    if(ch.classList.contains('locked')) return;
+    const pick=Number(ch.dataset.i), q=session.list[session.index];
+    $$('#qArea .choice').forEach((n,i)=>{ n.classList.add('locked'); if(i===q.answer) n.classList.add('correct'); if(i===pick && i!==q.answer) n.classList.add('incorrect'); });
+    $('#explain').classList.remove('hide');
+    const correct = pick===q.answer;
+    if(!correct) wrongSet.add(q.id); else wrongSet.delete(q.id);
+    store.set(WRONG_KEY, Array.from(wrongSet));
+    stats.answeredToday+=1; store.set(STATS_KEY, stats);
+    $('#status').innerHTML = correct ? '✅ Correct' : `❌ Incorrect · Correct is <b>${String.fromCharCode(65+q.answer)}</b>`;
+  }));
+}
+function nextQuestion(){
+  if(!session) return;
+  if(session.index < session.list.length-1){ session.index++; showCurrent(); }
+  else { finishSession(false); }
+}
+function finishSession(timeUp){
+  session.ended=true;
+  const seconds = Math.floor((Date.now()-session.start)/1000);
+  const correct = document.querySelectorAll('.choice.correct').length;
+  const total = session.list.length;
+  const score = correct/total;
+  history.push({mode:session.mode,score,time:seconds,total,when:Date.now()});
+  store.set(HIST_KEY, history);
+  $('#quiz').classList.add('hide'); $('#results').classList.remove('hide');
+  $('#scoreLine').textContent = `Score: ${Math.round(score*100)}% (${correct}/${total}) ${timeUp?'· Time up':''}`;
+  $('#kCorrect').textContent = `${correct}/${total}`; $('#kTime').textContent=secondsToMMSS(seconds); $('#kMode').textContent=session.mode;
+  renderHistory();
+  session=null; refreshKPIs();
+}
+function goHome(){ $('#results').classList.add('hide'); $('#home').classList.remove('hide'); }
+function retry(){ goHome(); }
+
+// ======= Modes
+function sampleDaily(){ return shuffle(BANK.slice()).slice(0,10) }
+function sampleMock(){ // rough exam balance
+  const byCat = BANK.reduce((a,q)=>{(a[q.category]??=[]).push(q);return a},{}); const out=[];
+  const plan=[['Clinical',11],['Water',5],['Machine',2],['Role',2]];
+  plan.forEach(([c,n])=>{ out.push(...shuffle(byCat[c]||[]).slice(0,n)); }); return shuffle(out);
+}
+function sampleHardBlueprint(total=40){ // smaller set for mobile
+  const take={Clinical:Math.round(total*0.55),Water:Math.round(total*0.23),Machine:Math.round(total*0.10),Role:total};
+  const first3=take.Clinical+take.Water+take.Machine; take.Role=Math.max(0,total-first3);
+  const out=[]; for(const c of ['Clinical','Water','Machine','Role']){ out.push(...shuffle((HARD_BY_CAT[c]||[]).slice()).slice(0,take[c]||0)); } return shuffle(out);
+}
+function sampleHardTech(total=40){
+  const take={Clinical:Math.round(total*0.45),Water:Math.round(total*0.35),Machine:Math.round(total*0.10),Role:total};
+  const first3=take.Clinical+take.Water+take.Machine; take.Role=Math.max(0,total-first3);
+  const out=[]; for(const c of ['Clinical','Water','Machine','Role']){ out.push(...shuffle((HARD_BY_CAT[c]||[]).slice()).slice(0,take[c]||0)); } return shuffle(out);
+}
+function startBooster(){
+  const ids=Array.from(wrongSet); if(ids.length===0){ alert('No weak spots saved yet. Miss a question then come back.'); return }
+  const pool=BANK.filter(q=>ids.includes(q.id)); if(!pool.length){ alert('Using hard questions to drill.'); return startSession({mode:'Weak Spot Booster', pool: HARD_BANK, size: Math.min(20,HARD_BANK.length)}); }
+  startSession({mode:'Weak Spot Booster', pool: shuffle(pool), size: Math.min(20,pool.length)});
+}
+
+// ======= KPIs & History
+function refreshKPIs(){
+  $('#todayKpi').textContent=String(stats.answeredToday||0);
+  $('#weakKpi').textContent=String(wrongSet.size||0);
+  const last=history[history.length-1]; $('#bestKpi').textContent= last? `${Math.round((last.score||0)*100)}%` : '—';
+}
+function renderHistory(){
+  const wrap=document.getElementById('histList'); if(!wrap) return; wrap.innerHTML='';
+  history.slice().reverse().slice(0,8).forEach(h=>{
+    const div=document.createElement('div'); div.className='item';
+    div.innerHTML=`<div class="badge">${h.mode}</div>
+      <div style="font-weight:700;margin-top:6px">${new Date(h.when).toLocaleString()}</div>
+      <div class="small">Score: <b>${Math.round((h.score||0)*100)}%</b> · Time: ${secondsToMMSS(h.time||0)} · Qs: ${h.total}</div>`;
+    wrap.appendChild(div);
+  });
+}
+
+// ======= Wire buttons
+document.getElementById('btnDaily').addEventListener('click',()=> startSession({mode:'Daily 10', pool: sampleDaily(), size:10}));
+document.getElementById('btnMock').addEventListener('click',()=> startSession({mode:'Full Mock', pool: sampleMock(), size: sampleMock().length, timeLimit: 40*60}));
+document.getElementById('btnHardBlueprint').addEventListener('click',()=> startSession({mode:'Hard · Blueprint', pool: sampleHardBlueprint(40), size:40, timeLimit: 40*60}));
+document.getElementById('btnHardTech').addEventListener('click',()=> startSession({mode:'Hard · Tech-Heavy', pool: sampleHardTech(40), size:40, timeLimit: 40*60}));
+document.getElementById('btnBooster').addEventListener('click', startBooster);
+
+// Init
+refreshKPIs();
+</script>
+</body></html>
