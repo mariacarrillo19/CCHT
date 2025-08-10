@@ -75,11 +75,12 @@ function storageAvailable(){try{const x='__t__';localStorage.setItem(x,x);localS
 const STORAGE_OK = storageAvailable();
 const store={get:(k,f)=>{if(!STORAGE_OK)return f;try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},
              set:(k,v)=>{if(!STORAGE_OK)return;try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-// ======= Question banks (core + hard) =======
-const BANK=[ // compact high-yield core (add more anytime)
+
+// ======= Core quick bank (for Daily/Mock). Add more anytime.
+const BANK=[
 {id:101,category:'Clinical',stem:'Patient becomes hypotensive (SBP 86) with dizziness during dialysis. First action?',choices:['Increase UF','Stop UF and give 100–200 mL NS','Raise dialysate temp','Call MD and continue'],answer:1,explanation:'Reduce/stop UF and give small NS bolus; reassess, notify RN/MD.'},
 {id:105,category:'Clinical',stem:'Venous pressure alarm rises suddenly. Check first:',choices:['Arterial needle','Dialysate temperature','Return line for kinks/clamps/clots','Bicarbonate jug level'],answer:2,explanation:'Return-side obstruction raises venous pressure.'},
-{id:203,category:'Water',stem:'Max allowable total chlorine (AAMI):',choices:['0.1 mg/L','0.5 mg/L','1.0 mg/L','0.01 mg/L'],answer:0,explanation:'Must be ≤ 0.1 mg/L.'},
+{id:203,category:'Water',stem:'Max allowable total chlorine (AAMI):',choices:['0.1 mg/L','0.5 mg/L','1.0 mg/L','0.01 mg/L'],answer:0,explanation:'Must be ≤ 0.1 mg/L (after 1st carbon).'},
 {id:204,category:'Water',stem:'When test total chlorine?',choices:['Daily only','Before first patient and every 4 hours','Weekly','Monthly'],answer:1,explanation:'Start of day and q4h.'},
 {id:302,category:'Machine',stem:'Blood leak alarm with pink effluent means:',choices:['High TMP only','Membrane fiber rupture—stop and change dialyzer','Air in venous chamber','Concentrate mixing error'],answer:1,explanation:'Treat as membrane breach.'},
 {id:111,category:'Clinical',stem:'Minimum handwashing time:',choices:['10 sec','20 sec','45 sec','60 sec'],answer:1,explanation:'≥20 seconds (soap & water).'},
@@ -88,17 +89,204 @@ const BANK=[ // compact high-yield core (add more anytime)
 {id:114,category:'Clinical',stem:'Fever and chills 1 hour into dialysis suggests:',choices:['Pyrogen reaction from endotoxins','Hemolysis','Air embolism','Dialyzer rupture'],answer:0,explanation:'Think endotoxin/pyrogen.'},
 {id:208,category:'Water',stem:'Hardness detected after softener indicates:',choices:['RO failure','Softener resin exhaustion—regenerate/service','Carbon breakthrough','Loop biofilm'],answer:1,explanation:'Service softener.'},
 ];
-const HARD_BANK=[ // realistic exam-style
-{id:9001,category:'Clinical',stem:'Patient is 3.0 kg over dry weight and asks to remove it all in 2 hours. Best FIRST action?',choices:['Agree to finish sooner','Explain risks; plan even UF over full session; consider cool dialysate','Increase sodium and remove faster','Raise BFR to speed UF'],answer:1,explanation:'Aggressive UF ↑ hypotension risk. Even UF over full session is safer.'},
-{id:9002,category:'Clinical',stem:'Venous pressure climbs and return line looks taut. MOST likely:',choices:['Arterial needle against wall','Kink/clot on return side or clamp closed','Wrong dialysate concentrate','Low pump speed'],answer:1,explanation:'Return obstruction → venous pressure ↑.'},
-{id:9101,category:'Water',stem:'Total chlorine after first carbon tank is 0.2 mg/L pre-day. Action?',choices:['Proceed; retest in 4h','Bypass RO','Do NOT start; correct and retest until ≤0.1 mg/L','Add more bicarbonate'],answer:2,explanation:'Above limit: unsafe to dialyze.'},
-{id:9202,category:'Machine',stem:'Blood leak alarm + pink effluent during tx. Next step:',choices:['Continue—sensor error','Stop tx, perform test, replace dialyzer/circuit','Increase dialysate flow','Silence alarm temporarily'],answer:1,explanation:'Assume membrane breach until proven otherwise.'},
-{id:9301,category:'Role',stem:'Patient refuses to continue. MOST appropriate:',choices:['Continue anyway for safety','Educate on risks, document refusal, notify RN/MD','Reduce UF secretly','Ask another patient to convince them'],answer:1,explanation:'Respect autonomy; educate, document, escalate.'},
-{id:9005,category:'Clinical',stem:'Yawning, nausea, cool clammy skin; SBP drops 20 mmHg. FIRST response?',choices:['Increase UF to meet goal','Stop/reduce UF; legs up; consider 100–200 mL NS','Increase dialysate flow','Turn off air detector'],answer:1,explanation:'Early hypotension → reduce/stop UF, support circulation.'},
-{id:9106,category:'Water',stem:'Product water culture is 120 CFU/mL. Response?',choices:['Within limits—continue','Recheck next month','Disinfect/sanitize and retest per policy','Increase RO pressure only'],answer:2,explanation:'Exceeds ≤100 CFU/mL: corrective action + retest.'},
-{id:9201,category:'Machine',stem:'Dialysate temp 38.5°C pre-connection. Best step?',choices:['Start—higher temp okay','Lower to ~36–37°C before starting','Increase sodium then start','Run saline 30 min then start'],answer:1,explanation:'Do not dialyze out-of-range temperature.'},
+
+// ======= HARD BANK (50+ realistic, exam-style)
+const HARD_BANK = [
+/* -------- Clinical (28) -------- */
+{id:10001,category:'Clinical',stem:'Pt is 3.0 kg above DW and asks to remove it all in 2 hrs. BP 138/84. Best FIRST action?',choices:[
+ 'Agree—the patient prefers shorter tx','Explain risks; plan even UF over full session; consider cool dialysate',
+ 'Increase dialysate sodium to pull faster','Raise BFR to speed UF'],answer:1,
+ explanation:'Aggressive UF ↑ hypotension/cramps. Even UF over full session is safer; consider cool dialysate per policy.'},
+{id:10002,category:'Clinical',stem:'Early signs of intradialytic hypotension appear (yawning, nausea, cool/clammy). FIRST action?',choices:[
+ 'Increase UF to hit goal','Stop/reduce UF; legs up; consider 100–200 mL NS',
+ 'Turn off air detector','Increase dialysate flow only'],answer:1,
+ explanation:'Treat volume depletion first: reduce/stop UF, position, small NS if needed.'},
+{id:10003,category:'Clinical',stem:'Shortly after start, pt has back pain, chest tightness, and hypotension; blood in lines looks “cherry red.” Best action?',choices:[
+ 'Return blood and continue with lower UF','Stop dialysis; DO NOT return blood; manage as hemolysis',
+ 'Give heparin bolus','Raise dialysate temp'],answer:1,
+ explanation:'Classic hemolysis → stop, don’t return blood; investigate source (water, temp, chloramine, kinked line).'},
+{id:10004,category:'Clinical',stem:'Venous pressure climbs and return line appears taut. MOST likely cause?',choices:[
+ 'Arterial needle against wall','Kink/clot/clamp on return line',
+ 'Wrong dialysate concentrate','Low pump speed'],answer:1,
+ explanation:'Return-side obstruction raises venous pressure.'},
+{id:10005,category:'Clinical',stem:'Arterial pressure becomes very negative; venous pressure low. Most likely?',choices:[
+ 'Return line kink','Arterial line/needle obstruction or needle against wall',
+ 'Wrong dialyzer','Air in venous chamber'],answer:1,
+ explanation:'Very negative arterial pressure = inflow obstruction.'},
+{id:10006,category:'Clinical',stem:'Access: strong pulse but no continuous thrill over a fistula. NEXT step?',choices:[
+ 'Proceed; normal finding','Cannulate with smaller needles',
+ 'Report possible outflow stenosis; hold cannulation per policy','Apply tourniquet and retry'],answer:2,
+ explanation:'Absent continuous thrill suggests stenosis/thrombus; escalate.'},
+{id:10007,category:'Clinical',stem:'Best pre-cannulation patency check for AVF?',choices:[
+ 'Ask if it hurts','Measure limb circumference','Check for thrill and bruit','Flush through needle'],answer:2,
+ explanation:'Thrill (palpate) & bruit (auscultate) indicate flow.'},
+{id:10008,category:'Clinical',stem:'Which access has highest infection risk?',choices:[
+ 'Mature AV fistula','AV graft','Tunneled CVC','Buttonhole fistula'],answer:2,
+ explanation:'Catheters have the highest infection/complication risk.'},
+{id:10009,category:'Clinical',stem:'Correct needle direction (typical practice) for rope-ladder?',choices:[
+ 'Arterial antegrade; venous retrograde','Arterial retrograde; venous antegrade',
+ 'Both retrograde','Both antegrade'],answer:1,
+ explanation:'Arterial toward anastomosis (retrograde); venous toward heart (antegrade). Verify unit policy.'},
+{id:10010,category:'Clinical',stem:'After cannulation, swelling/pain at arterial needle site appears. Best action?',choices:[
+ 'Increase heparin','Stop pump and assess for infiltration','Tighten tape and continue','Raise BFR'],answer:1,
+ explanation:'Suspect infiltration: stop pump and assess/secure.'},
+{id:10011,category:'Clinical',stem:'Pt cramps during rapid UF. FIRST step?',choices:[
+ 'Decrease/pause UF; consider small NS','Increase BFR','Give heparin','Switch dialyzer'],answer:0,
+ explanation:'Cramps commonly from intravascular depletion.'},
+{id:10012,category:'Clinical',stem:'Minimum handwashing time before patient contact?',choices:[
+ '10 sec','20 sec','45 sec','60 sec'],answer:1,
+ explanation:'≥20 seconds with soap and water.'},
+{id:10013,category:'Clinical',stem:'Correct DONNING sequence?',choices:[
+ 'Gloves → gown → mask → goggles','Gown → mask/resp → eye protection → gloves',
+ 'Mask → gloves → gown → goggles','Gown → gloves → mask → goggles'],answer:1,
+ explanation:'Gown, mask/resp, eye protection, then gloves.'},
+{id:10014,category:'Clinical',stem:'Correct DOFFING sequence (most common)?',choices:[
+ 'Gloves → eye protection → gown → mask','Mask → gown → gloves → goggles',
+ 'Gown → mask → gloves → goggles','Goggles → mask → gown → gloves'],answer:0,
+ explanation:'Gloves first, then eye protection, then gown, then mask; hand hygiene between steps per policy.'},
+{id:10015,category:'Clinical',stem:'Fever and chills 1 hr into tx without other cause. Concern?',choices:[
+ 'Pyrogen reaction (endotoxin)','Air embolism','Dialyzer rupture','Hypoglycemia'],answer:0,
+ explanation:'Think endotoxins/pyrogens in water/dialysate.'},
+{id:10016,category:'Clinical',stem:'Sudden chest pain + dyspnea during tx. FIRST action?',choices:[
+ 'Give snack','Stop pump, clamp lines, left side Trendelenburg, O2',
+ 'Finish treatment then call MD','Increase dialysate temp'],answer:1,
+ explanation:'Treat as air embolism until ruled out.'},
+{id:10017,category:'Clinical',stem:'Heparin scheduled but patient is bleeding from access. Best action?',choices:[
+ 'Give full dose','Give half dose','Hold heparin and use intermittent saline flushes','Increase UF'],answer:2,
+ explanation:'Avoid anticoagulation with active bleeding.'},
+{id:10018,category:'Clinical',stem:'How often to document routine vitals during tx (typical practice)?',choices:[
+ 'Every 5 min','Every 15–30 min','Hourly','Only pre & post'],answer:1,
+ explanation:'Every 15–30 minutes and PRN per facility policy.'},
+{id:10019,category:'Clinical',stem:'Post-needle removal, venous site keeps oozing. Appropriate action?',choices:[
+ 'Release pressure early','Maintain firm sterile pressure longer; reassess anticoagulation','Apply tourniquet','Start heparin drip'],answer:1,
+ explanation:'Prolonged manual pressure; evaluate anticoagulation if persistent.'},
+{id:10020,category:'Clinical',stem:'Which is TRUE about rope-ladder cannulation?',choices:[
+ 'Use exact same site daily','Rotate sites along access to distribute punctures',
+ 'Deeper needle prevents steal','Tourniquets never used'],answer:1,
+ explanation:'Distributes punctures; reduces aneurysm/scar.'},
+{id:10021,category:'Clinical',stem:'Buttonhole cannulation requires:',choices:[
+ 'Different angles each time','Scab removal with strict aseptic technique',
+ 'Use for catheters','It lowers infection risk vs any fistula'],answer:1,
+ explanation:'Same track; remove scab sterilely.'},
+{id:10022,category:'Clinical',stem:'Pt reports itching during dialysis over weeks. MOST likely contributor?',choices:[
+ 'Uremia/inadequate clearance','High dialysate temp only','Hypoglycemia','Tape allergy always'],answer:0,
+ explanation:'Commonly uremia; also check Ca/PO4/skin care.'},
+{id:10023,category:'Clinical',stem:'New chest pain during tx. Tech should:',choices:[
+ 'Finish session','Escalate immediately to RN/MD','Give water','Increase UF'],answer:1,
+ explanation:'Treat chest pain as potentially life-threatening.'},
+{id:10024,category:'Clinical',stem:'Which catheter practice BEST reduces CRBSI?',choices:[
+ 'Change dressings weekly only','Strict aseptic technique + chlorhexidine skin prep',
+ 'Use non-sterile gloves for speed','Let exit site scab build'],answer:1,
+ explanation:'Aseptic technique and proper skin prep/dressings.'},
+{id:10025,category:'Clinical',stem:'Anaphylactoid reaction soon after starting: itching, wheeze. FIRST steps?',choices:[
+ 'Continue and observe','Stop pump, clamp, O2, notify RN/MD','Give snack','Increase dialysate flow'],answer:1,
+ explanation:'Stop exposure, support airway/oxygenation, escalate.'},
+{id:10026,category:'Clinical',stem:'Patient arrives 3 kg above DW. Safest UF plan?',choices:[
+ 'Remove 3 kg as fast as possible','Even UF over session; consider UF profiling',
+ 'Avoid UF entirely','Only increase dialysate flow'],answer:1,
+ explanation:'Even UF with close monitoring; profiling/cool per policy.'},
+{id:10027,category:'Clinical',stem:'aPTT is mainly used to monitor:',choices:[
+ 'Blood glucose','PT/INR','Heparin effect (per policy)','Serum potassium'],answer:2,
+ explanation:'aPTT may be used for heparin effect monitoring per facility.'},
+{id:10028,category:'Clinical',stem:'Access with LOWEST infection risk:',choices:[
+ 'AV fistula','AV graft','Tunneled CVC','Non-tunneled CVC'],answer:0,
+ explanation:'Fistula has the lowest infection risk.'},
+
+/* -------- Water/Technical (14) -------- */
+{id:10101,category:'Water',stem:'AAMI max total chlorine (free+combined) allowed in product water is:',choices:[
+ '0.1 mg/L','0.5 mg/L','1.0 mg/L','0.01 mg/L'],answer:0,
+ explanation:'≤ 0.1 mg/L (test after 1st carbon).'},
+{id:10102,category:'Water',stem:'When must total chlorine be tested?',choices:[
+ 'Daily only','Before first patient and every 4 hours during tx day',
+ 'Weekly','Monthly'],answer:1,
+ explanation:'At start of day and q4h during treatments.'},
+{id:10103,category:'Water',stem:'GAC carbon tanks primarily remove:',choices:[
+ 'Calcium/magnesium','Chlorine/chloramines','Endotoxin','Sodium'],answer:1,
+ explanation:'Carbon adsorbs chlorine and catalytically reduces chloramines.'},
+{id:10104,category:'Water',stem:'Softener’s role in pretreatment is to remove:',choices:[
+ 'Chlorine','Hardness (Ca/Mg)','Bacteria/endotoxin','pH'],answer:1,
+ explanation:'Softening prevents scaling and protects RO membrane.'},
+{id:10105,category:'Water',stem:'Correct pretreatment sequence (typical) to protect RO:',choices:[
+ 'RO → Softener → Carbon → Ultrafilter','Multimedia → Softener → Carbon → RO → Ultrafilter',
+ 'Carbon → RO → Softener','Softener → Ultrafilter → Carbon → RO'],answer:1,
+ explanation:'Particulate → hardness → chlorine → RO → endotoxin polish.'},
+{id:10106,category:'Water',stem:'Ultrafilter (endotoxin filter) post-RO is used to remove:',choices:[
+ 'Hardness','Chlorine','Bacteria and endotoxins','Sodium'],answer:2,
+ explanation:'Ultrafilters capture bacteria/pyrogens downstream of RO.'},
+{id:10107,category:'Water',stem:'AAMI bacteria maximum for dialysis water:',choices:[
+ '50 CFU/mL','100 CFU/mL','250 CFU/mL','0 CFU/mL'],answer:1,
+ explanation:'Standard limit ≤ 100 CFU/mL; endotoxin ≤ 0.25 EU/mL.'},
+{id:10108,category:'Water',stem:'Monthly water testing focuses on:',choices:[
+ 'Total chlorine only','Microbiological cultures and endotoxins','pH only','Hardness only'],answer:1,
+ explanation:'AAMI requires monthly micro + endotoxin testing.'},
+{id:10109,category:'Water',stem:'If total chlorine >0.1 mg/L after first carbon:',choices:[
+ 'Proceed; recheck later','Bypass RO','STOP treatments; correct and retest until within limit','Increase RO pressure'],answer:2,
+ explanation:'It’s unsafe to dialyze until within limit.'},
+{id:10110,category:'Water',stem:'Hardness detected after softener indicates:',choices:[
+ 'RO failure','Softener resin exhaustion—regenerate/service','Carbon breakthrough','Loop biofilm'],answer:1,
+ explanation:'Regenerate/service softener; hardness shouldn’t pass.'},
+{id:10111,category:'Water',stem:'Why two carbon tanks in series?',choices:[
+ 'Increase flow only','Redundancy if first breaks through','Adjust pH','Remove sodium'],answer:1,
+ explanation:'Second tank protects if first is exhausted.'},
+{id:10112,category:'Water',stem:'RO product water conductivity suddenly increases. FIRST check:',choices:[
+ 'Verify concentrates/proportioning (mix) on machines','Replace carbon immediately','Regenerate softener right away','Ignore'],answer:0,
+ explanation:'Mixing/proportioning issues common; persistent ↑ may indicate membrane issue.'},
+{id:10113,category:'Water',stem:'Product water culture returns 120 CFU/mL. Correct response:',choices:[
+ 'Within limits—continue','Wait until next month to recheck',
+ 'Initiate corrective actions (disinfect/sanitize) and retest per policy','Increase RO pressure'],answer:2,
+ explanation:'Exceeds ≤100 CFU/mL → corrective action and retest.'},
+{id:10114,category:'Water',stem:'Chloramine exposure in dialysis patients primarily causes:',choices:[
+ 'Hypertension','Hemolysis','Pruritus only','Hyperkalemia'],answer:1,
+ explanation:'Chloramines can hemolyze RBCs.'},
+
+/* -------- Machine/Safety (6) -------- */
+{id:10201,category:'Machine',stem:'Dialysate temperature shows 38.5°C pre-connection. Best step?',choices:[
+ 'Begin treatment—okay','Lower to ~36–37°C before starting','Increase sodium then start','Run saline 30 min then start'],answer:1,
+ explanation:'Do not dialyze with out-of-range temperature.'},
+{id:10202,category:'Machine',stem:'Blood leak alarm + pink effluent during tx. Next step?',choices:[
+ 'Continue; likely sensor error','Stop tx, perform blood leak test, replace dialyzer/circuit',
+ 'Increase dialysate flow','Silence alarm temporarily'],answer:1,
+ explanation:'Treat as membrane breach until proven otherwise.'},
+{id:10203,category:'Machine',stem:'TMP steadily rising while clearance falls. Most likely cause:',choices:[
+ 'Dialyzer clotting/fouling','Access recirculation only','Low conductivity','High dialysate temp'],answer:0,
+ explanation:'Clotting/fouling ↑ resistance → TMP ↑, clearance ↓.'},
+{id:10204,category:'Machine',stem:'Extracorporeal circuit was open to air after a loose connection. Correct action:',choices:[
+ 'Clamp and continue','Return blood and continue','Discard entire circuit and set up new','Give heparin and proceed'],answer:2,
+ explanation:'Air exposure risks contamination/emboli—replace circuit.'},
+{id:10205,category:'Machine',stem:'Low conductivity alarm after setup. FIRST check:',choices:[
+ 'Concentrates connected/mixed correctly','UF profile settings','Air detector sensitivity','Dry weight'],answer:0,
+ explanation:'Empty/misconnected/incorrectly mixed concentrates common cause.'},
+{id:10206,category:'Machine',stem:'Best way to prevent air embolism risk:',choices:[
+ 'Run higher BFR','Ensure air detector functional and venous chamber level correct',
+ 'Use smaller dialyzer','Turn off alarms during cannulation'],answer:1,
+ explanation:'Air detector + proper chamber level are primary safeguards.'},
+
+/* -------- Role/Professionalism (6) -------- */
+{id:10301,category:'Role',stem:'Patient refuses to continue treatment. MOST appropriate response:',choices:[
+ 'Continue anyway for safety','Educate on risks, document refusal, notify RN/MD',
+ 'Reduce UF secretly to compromise','Have another patient persuade them'],answer:1,
+ explanation:'Respect autonomy; educate, document, escalate.'},
+{id:10302,category:'Role',stem:'Best method for reporting a critical change to RN:',choices:[
+ 'Casual hallway chat','SBAR (Situation, Background, Assessment, Recommendation)',
+ 'Text MD without RN awareness','Wait until shift change'],answer:1,
+ explanation:'SBAR standardizes handoff for safety.'},
+{id:10303,category:'Role',stem:'Which task is within the dialysis technician scope?',choices:[
+ 'Prescribe heparin','Diagnose access stenosis',
+ 'Initiate/monitor treatment per orders; report abnormalities','Change provider orders in machine'],answer:2,
+ explanation:'Techs perform ordered care; diagnosing/prescribing is out of scope.'},
+{id:10304,category:'Role',stem:'Confidentiality requires you to:',choices:[
+ 'Discuss cases in public if de-identified','Share info only with staff involved in care',
+ 'Share with family without consent','Post anonymized details online'],answer:1,
+ explanation:'Limit disclosures to the care team per policy/consent.'},
+{id:10305,category:'Role',stem:'Multiple patients need help at once. Who first?',choices:[
+ 'First come, first served','Most unstable/critical patient first','Finish paperwork first','Quiet patient last'],answer:1,
+ explanation:'Prioritize by acuity for safety.'},
+{id:10306,category:'Role',stem:'After needlestick exposure, FIRST step:',choices:[
+ 'Finish current task','Wash area, report immediately, follow exposure protocol',
+ 'Apply bandage and ignore','Wait for symptoms'],answer:1,
+ explanation:'Immediate washing & reporting → post-exposure management.'},
 ];
-const HARD_BY_CAT=HARD_BANK.reduce((a,q)=>{(a[q.category]??=[]).push(q);return a},{});
+const HARD_BY_CAT = HARD_BANK.reduce((acc,q)=>{ (acc[q.category]??=([])).push(q); return acc; }, {});
 
 // ======= State
 const $=sel=>document.querySelector(sel), $$=sel=>Array.from(document.querySelectorAll(sel));
@@ -163,12 +351,12 @@ function retry(){ goHome(); }
 
 // ======= Modes
 function sampleDaily(){ return shuffle(BANK.slice()).slice(0,10) }
-function sampleMock(){ // rough exam balance
+function sampleMock(){
   const byCat = BANK.reduce((a,q)=>{(a[q.category]??=[]).push(q);return a},{}); const out=[];
   const plan=[['Clinical',11],['Water',5],['Machine',2],['Role',2]];
   plan.forEach(([c,n])=>{ out.push(...shuffle(byCat[c]||[]).slice(0,n)); }); return shuffle(out);
 }
-function sampleHardBlueprint(total=40){ // smaller set for mobile
+function sampleHardBlueprint(total=40){
   const take={Clinical:Math.round(total*0.55),Water:Math.round(total*0.23),Machine:Math.round(total*0.10),Role:total};
   const first3=take.Clinical+take.Water+take.Machine; take.Role=Math.max(0,total-first3);
   const out=[]; for(const c of ['Clinical','Water','Machine','Role']){ out.push(...shuffle((HARD_BY_CAT[c]||[]).slice()).slice(0,take[c]||0)); } return shuffle(out);
@@ -210,5 +398,6 @@ document.getElementById('btnBooster').addEventListener('click', startBooster);
 
 // Init
 refreshKPIs();
+document.getElementById('btnNext').addEventListener('click', nextQuestion);
 </script>
 </body></html>
