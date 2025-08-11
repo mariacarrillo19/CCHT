@@ -1,92 +1,502 @@
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CCHT Practice Quiz</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCHT Study Coach — Hard + Explanations + Timed Exam</title>
 <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
-    h1 { text-align: center; }
-    .question { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
-    button { padding: 10px; margin-top: 10px; }
+:root{--bg:#0b1220;--card:#0f172a;--ink:#e5e7eb;--muted:#94a3b8;--pri:#60a5fa;--ok:#22c55e;--bad:#ef4444;--chip:#1f2937}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto}
+.container{max-width:980px;margin:0 auto;padding:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.card{background:var(--card);border:1px solid #233047;border-radius:14px;padding:16px}
+h1{font-size:20px;margin:0 0 10px}
+button{background:var(--pri);color:#0b1220;border:none;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer}
+button.outline{background:transparent;border:1px solid var(--pri);color:var(--pri)}
+.badge,.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:var(--chip);color:#e2e8f0;font-size:12px}
+.small{font-size:13px;color:var(--muted)}.muted{color:var(--muted)}
+.hide{display:none}.list .item{padding:10px 0;border-top:1px solid #1e293b}
+.kpi{display:flex;gap:10px;flex-wrap:wrap}
+.kpi .cell{flex:1;min-width:180px;background:#0c1322;border:1px solid #1d2a3e;border-radius:12px;padding:12px}
+.q-stem{font-weight:700;margin:8px 0}
+.choice{display:flex;gap:10px;align-items:flex-start;border:1px solid #213047;border-radius:10px;padding:10px;margin:8px 0;cursor:pointer}
+.choice .badge{background:#111827}
+.choice.correct{border-color:#14532d;background:rgba(34,197,94,.1)}
+.choice.incorrect{border-color:#7f1d1d;background:rgba(239,68,68,.08)}
+.explain{margin-top:8px;border-left:3px solid #334155;padding-left:10px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.progress{height:8px;background:#111827;border-radius:999px;overflow:hidden}
+.progress>div{height:100%;width:0;background:var(--pri)}
+footer{color:#64748b;margin-top:16px;font-size:12px;text-align:center}
+hr.sep{border:0;border-top:1px solid #1e293b;margin:12px 0}
 </style>
-</head>
-<body>
+</head><body><div class="container">
 
-<h1>CCHT Practice Quiz</h1>
+  <!-- Home -->
+  <div id="home" class="card">
+    <div class="topbar">
+      <div><h1>CCHT Study Coach</h1><div class="small muted">Hard questions · instant explanations & memory tips · timed exam with section breakdown</div></div>
+      <span class="pill" id="modePill">Home</span>
+    </div>
 
-<div id="quiz"></div>
+    <div class="row" style="margin:10px 0">
+      <button id="btnDaily">Daily Drill (10)</button>
+      <button id="btnHard" class="outline">Hard Mode (40)</button>
+      <button id="btnExam" class="outline">Full Practice Exam</button>
+      <button id="btnBooster" class="outline">Weak Areas Booster</button>
+    </div>
 
-<button onclick="submitQuiz()">Submit</button>
+    <div class="kpi">
+      <div class="cell"><div class="small">Today answered</div><div style="font-size:22px" id="todayKpi">0</div></div>
+      <div class="cell"><div class="small">Weak spots saved</div><div style="font-size:22px" id="weakKpi">0</div></div>
+      <div class="cell"><div class="small">Best recent</div><div style="font-size:22px" id="bestKpi">—</div></div>
+    </div>
 
-<div id="results"></div>
+    <hr class="sep">
+    <div class="small">
+      <b>Tips:</b>  
+      • Do <b>Daily Drill</b> for quick hits (answers on the spot).  
+      • Use <b>Hard Mode</b> to mimic exam wording and tricky distractors.  
+      • Run a <b>Full Practice Exam</b> for timing & nerves (answers at the end).  
+      • Smash your gaps with <b>Weak Areas Booster</b> (auto-selects sections you’re missing).
+    </div>
+  </div>
+
+  <!-- Quiz -->
+  <div id="quiz" class="card hide">
+    <div class="topbar">
+      <div><span class="pill" id="catPill">Mix</span> <span class="pill" id="countPill"><span id="qNum">1</span>/<span id="qTotal">10</span></span></div>
+      <div class="pill" id="timer">—</div>
+    </div>
+    <div class="progress" style="margin:12px 0 6px"><div id="bar"></div></div>
+    <div id="qArea"></div>
+    <div class="row"><button id="btnNext" class="outline">Next →</button></div>
+  </div>
+
+  <!-- Results -->
+  <div id="results" class="card hide">
+    <h1>Results</h1>
+    <div id="scoreLine" style="font-size:22px;margin-bottom:10px"></div>
+    <div class="kpi">
+      <div class="cell"><div class="small">Correct</div><div id="kCorrect" style="font-size:22px">0</div></div>
+      <div class="cell"><div class="small">Time</div><div id="kTime" style="font-size:22px">—</div></div>
+      <div class="cell"><div class="small">Mode</div><div id="kMode" style="font-size:22px">—</div></div>
+    </div>
+
+    <div id="bySection" style="margin-top:12px"></div>
+
+    <h3 style="margin-top:14px">Recent Sessions</h3>
+    <div id="histList" class="list"></div>
+    <div class="row" style="margin-top:12px;">
+      <button onclick="goHome()">Home</button>
+      <button class="outline" onclick="retry()">Retry</button>
+    </div>
+  </div>
+
+  <footer>If your browser blocks saving (private mode), quizzes still work — but streaks/booster history won’t persist.</footer>
+</div>
 
 <script>
-const questions = [
-    {
-        question: "In hemodialysis, what is the primary purpose of the dialyzer membrane?",
-        options: ["Filter out red blood cells", "Allow diffusion of waste products and prevent large molecules from crossing", "Pump blood", "Add bicarbonate to the blood"],
-        answer: 1,
-        explanation: "The semipermeable membrane in the dialyzer allows small waste molecules (like urea, creatinine) to diffuse across, but keeps large molecules like proteins and blood cells from crossing."
-    },
-    {
-        question: "What is the acceptable total chlorine level in water used for dialysis, according to AAMI standards?",
-        options: ["Less than 0.5 ppm", "Less than 0.1 ppm", "Less than 1.0 ppm", "Exactly 0.0 ppm"],
-        answer: 1,
-        explanation: "AAMI standards require total chlorine (chloramine + free chlorine) to be less than 0.1 ppm to prevent hemolysis."
-    },
-    {
-        question: "Which condition is most likely caused by inadequate heparin during dialysis?",
-        options: ["Clotted dialyzer and bloodlines", "Excessive bleeding post-treatment", "Metabolic alkalosis", "Hypotension"],
-        answer: 0,
-        explanation: "If there is insufficient anticoagulation, clotting can occur in the extracorporeal circuit, leading to treatment interruptions and inadequate dialysis."
-    },
-    {
-        question: "During water treatment, what is the main purpose of the carbon tanks?",
-        options: ["Remove bacteria", "Remove endotoxins", "Remove chlorine and chloramines", "Remove calcium and magnesium"],
-        answer: 2,
-        explanation: "Carbon tanks adsorb chlorine and chloramines to protect patients from hemolysis."
-    },
-    {
-        question: "A patient complains of chest pain and shortness of breath during dialysis. What should you do first?",
-        options: ["Stop the blood pump", "Increase dialysate flow", "Continue and monitor", "Give saline bolus immediately"],
-        answer: 0,
-        explanation: "Chest pain and shortness of breath could indicate serious complications (air embolism, myocardial infarction). Stop the blood pump and follow emergency protocol."
-    }
+/* ========== Storage helpers (safe in browsers that block localStorage) ========== */
+function storageAvailable(){try{const x='__t__';localStorage.setItem(x,x);localStorage.removeItem(x);return true}catch(e){return false}}
+const STORAGE_OK = storageAvailable();
+const store={get:(k,f)=>{if(!STORAGE_OK)return f;try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},
+             set:(k,v)=>{if(!STORAGE_OK)return;try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+
+const $=sel=>document.querySelector(sel), $$=sel=>Array.from(document.querySelectorAll(sel));
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function secondsToMMSS(s){const m=Math.floor(s/60),ss=('0'+(s%60)).slice(-2);return `${m}:${ss}`}
+
+/* ========== Question bank (40 hard + explanations + memory tips) ========== */
+/* Sections: Clinical, Water, Machine, Role/IC */
+const Q = [
+/* ---- Clinical ---- */
+{ id:9001, sec:'Clinical',
+  stem:'Patient is 3.0 kg over dry weight and wants to remove it all in 2 hours. BP 138/84. Best FIRST action?',
+  choices:['Agree—patient prefers shorter tx','Explain risks; plan even UF over full session; consider cool dialysate','Increase sodium to pull faster','Raise BFR to speed UF'],
+  answer:1,
+  why:'Aggressive UF ↑ hypotension/cramps. Safer: even UF over the full session; consider cool dialysate per policy.',
+  tip:'“Fast UF = Fast floor” (you’ll drop them). Even & cool is safer.' },
+
+{ id:9002, sec:'Clinical',
+  stem:'Early signs of intradialytic hypotension (yawning, nausea, cool/clammy). FIRST action?',
+  choices:['Increase UF to hit goal','Stop/reduce UF; legs up; consider 100–200 mL NS','Turn off air detector','Increase dialysate flow only'],
+  answer:1,
+  why:'Treat volume depletion first: reduce/stop UF, position legs up; consider small NS bolus.',
+  tip:'“Yawn, nausea, clammy = UF is too hammy” → pause UF, small NS.' },
+
+{ id:9003, sec:'Clinical',
+  stem:'Shortly after start, pt has back pain, chest tightness, hypotension; blood looks “cherry red.” Best action?',
+  choices:['Return blood and continue lower UF','Stop dialysis; DO NOT return blood; manage as hemolysis','Give heparin bolus','Raise dialysate temp'],
+  answer:1,
+  why:'Classic hemolysis → stop dialysis and do not return blood; follow emergency protocol and find source.',
+  tip:'“Cherry red + chest/back pain” = think hemolysis.' },
+
+{ id:9004, sec:'Clinical',
+  stem:'Venous pressure climbs and return line appears taut. MOST likely cause?',
+  choices:['Arterial needle against wall','Kink/clot/clamp on return line','Wrong dialysate concentrate','Low pump speed'],
+  answer:1,
+  why:'Return-side obstruction increases venous pressure (kink, clamp, clot).',
+  tip:'“Venous ↑ = V for ‘back to patient’ side blocked.”' },
+
+{ id:9005, sec:'Clinical',
+  stem:'Arterial pressure very negative; venous pressure low. Most likely?',
+  choices:['Return line kink','Arterial line/needle obstruction or needle against wall','Wrong dialyzer','Air in venous chamber'],
+  answer:1,
+  why:'Very negative arterial pressure = inflow obstruction.',
+  tip:'“A = Access side pulling too hard.”' },
+
+{ id:9006, sec:'Clinical',
+  stem:'Access assessment shows strong pulse but NO continuous thrill over fistula. NEXT step?',
+  choices:['Proceed; normal','Cannulate with smaller needles','Report possible outflow stenosis; hold cannulation per policy','Apply tourniquet and retry'],
+  answer:2,
+  why:'Loss of continuous thrill suggests stenosis/thrombus — escalate and follow policy.',
+  tip:'“No thrill? Don’t drill.” (Don’t cannulate.)' },
+
+{ id:9007, sec:'Clinical',
+  stem:'Correct typical needle direction for rope-ladder?',
+  choices:['Art antegrade; ven retrograde','Art retrograde; ven antegrade','Both retrograde','Both antegrade'],
+  answer:1,
+  why:'Commonly arterial toward anastomosis (retrograde); venous toward heart (antegrade). Check unit policy.',
+  tip:'“A back, V forward.”' },
+
+{ id:9008, sec:'Clinical',
+  stem:'Fever and chills about 1 hour into dialysis suggest:',
+  choices:['Pyrogen reaction (endotoxin)','Air embolism','Dialyzer rupture','Hypoglycemia'],
+  answer:0,
+  why:'Think endotoxin/pyrogen contamination.',
+  tip:'“Chills mid-dialysis = bugs, not hugs.”' },
+
+{ id:9009, sec:'Clinical',
+  stem:'Heparin scheduled but pt is bleeding from access. Best action?',
+  choices:['Give full dose','Give half dose','Hold heparin and use intermittent saline flushes','Increase UF'],
+  answer:2,
+  why:'Avoid anticoagulation with active bleeding; use saline flushes per policy.',
+  tip:'“Bleeding? Heparin is leaving.”' },
+
+{ id:9010, sec:'Clinical',
+  stem:'Sudden chest pain + dyspnea during dialysis. FIRST action?',
+  choices:['Give snack','Stop pump, clamp lines, left side Trendelenburg, O2','Finish treatment then call MD','Increase dialysate temp'],
+  answer:1,
+  why:'Treat as air embolism until ruled out.',
+  tip:'“Air care: stop, clamp, left, O2.”' },
+
+{ id:9011, sec:'Clinical',
+  stem:'Correct DONNING sequence:',
+  choices:['Gloves → gown → mask → goggles','Gown → mask/resp → eye protection → gloves','Mask → gloves → gown → goggles','Gown → gloves → mask → goggles'],
+  answer:1,
+  why:'Gown, mask/respirator, eye protection, then gloves.',
+  tip:'“G-M-E-G” (Gown, Mask, Eyes, Gloves).' },
+
+{ id:9012, sec:'Clinical',
+  stem:'Correct DOFFING sequence (common):',
+  choices:['Gloves → eye protection → gown → mask','Mask → gown → gloves → goggles','Gown → mask → gloves → goggles','Goggles → mask → gown → gloves'],
+  answer:0,
+  why:'Gloves first (dirtiest), then eye protection, gown, mask; hand hygiene between.',
+  tip:'“Gloves go first.”' },
+
+/* ---- Water ---- */
+{ id:9101, sec:'Water',
+  stem:'AAMI max total chlorine (free+combined) in product water:',
+  choices:['0.1 mg/L','0.5 mg/L','1.0 mg/L','0.01 mg/L'],
+  answer:0,
+  why:'Total chlorine must be ≤ 0.1 mg/L.',
+  tip:'“One TENTH is the LIMIT.”' },
+
+{ id:9102, sec:'Water',
+  stem:'When must total chlorine be tested?',
+  choices:['Daily only','Before first patient and every 4 hours during the day','Weekly','Monthly'],
+  answer:1,
+  why:'Start of day and q4h during treatments.',
+  tip:'“Start + every 4” (clock-math tip).' },
+
+{ id:9103, sec:'Water',
+  stem:'Why are two carbon tanks used in series?',
+  choices:['Increase flow only','Redundancy if first breaks through','Adjust pH','Remove sodium'],
+  answer:1,
+  why:'Second tank protects if the first exhausts unexpectedly.',
+  tip:'“Carbon #2 guards you.”' },
+
+{ id:9104, sec:'Water',
+  stem:'AAMI max bacteria in dialysis water:',
+  choices:['50 CFU/mL','100 CFU/mL','250 CFU/mL','0 CFU/mL'],
+  answer:1,
+  why:'Standard limit is ≤ 100 CFU/mL; endotoxin ≤ 0.25 EU/mL.',
+  tip:'“Hundred CFU cap.”' },
+
+{ id:9105, sec:'Water',
+  stem:'Correct pretreatment order to protect RO:',
+  choices:['RO → Softener → Carbon → Ultrafilter','Multimedia → Softener → Carbon → RO → Ultrafilter','Carbon → RO → Softener','Softener → Ultrafilter → Carbon → RO'],
+  answer:1,
+  why:'Particulates → hardness → chlorine → RO → endotoxin polish.',
+  tip:'“Sand → Soft → Carbon → RO → Ultra.”' },
+
+{ id:9106, sec:'Water',
+  stem:'Product water culture returns 120 CFU/mL. Correct response:',
+  choices:['Within limits—continue','Wait for next month','Initiate corrective action (disinfect/sanitize) and retest per policy','Increase RO pressure only'],
+  answer:2,
+  why:'Exceeds ≤100 CFU/mL; must correct and retest.',
+  tip:'“Over 100? Disinfect, then double-check.”' },
+
+{ id:9107, sec:'Water',
+  stem:'Chloramine exposure in dialysis primarily causes:',
+  choices:['Hypertension','Hemolysis','Pruritus only','Hyperkalemia'],
+  answer:1,
+  why:'Chloramines can hemolyze RBCs.',
+  tip:'“Chlora-MINES the RBCs.”' },
+
+{ id:9108, sec:'Water',
+  stem:'Hardness detected after softener indicates:',
+  choices:['RO failure','Softener resin exhaustion—regenerate/service','Carbon breakthrough','Loop biofilm'],
+  answer:1,
+  why:'Hardness past the softener means resin exhaustion.',
+  tip:'“Hardness after softener = softener’s done.”' },
+
+/* ---- Machine ---- */
+{ id:9201, sec:'Machine',
+  stem:'Dialysate temperature shows 38.5°C before connection. Best step?',
+  choices:['Start treatment—okay','Lower to ~36–37°C first','Increase dialysate sodium then start','Run saline 30 min then start'],
+  answer:1,
+  why:'Do not dialyze with out-of-range temperature.',
+  tip:'“High temp? Halt treatment.”' },
+
+{ id:9202, sec:'Machine',
+  stem:'Blood leak alarm + pink effluent during tx. Next step:',
+  choices:['Continue; sensor error','Stop tx, perform blood leak test, replace dialyzer/circuit','Increase dialysate flow','Silence alarm'],
+  answer:1,
+  why:'Treat as membrane breach until proven otherwise.',
+  tip:'“Pink effluent = stop & swap.”' },
+
+{ id:9203, sec:'Machine',
+  stem:'TMP rising steadily while clearance falls. Most likely cause:',
+  choices:['Dialyzer clotting/fouling','Access recirculation only','Low conductivity','High dialysate temperature'],
+  answer:0,
+  why:'Clotting/fouling ↑ resistance → TMP ↑, clearance ↓.',
+  tip:'“TMP ↑ = membrane mucked.”' },
+
+{ id:9204, sec:'Machine',
+  stem:'Extracorporeal circuit was open to air at a connection. Correct action:',
+  choices:['Clamp and continue','Return blood and continue','Discard entire circuit and set up new','Give heparin and proceed'],
+  answer:2,
+  why:'Air exposure risks contamination/emboli; replace circuit.',
+  tip:'“Air touch? Toss the set.”' },
+
+{ id:9205, sec:'Machine',
+  stem:'Low conductivity alarm after setup. FIRST check:',
+  choices:['Concentrates connected/mixed correctly','UF profile settings','Air detector sensitivity','Dry weight'],
+  answer:0,
+  why:'Empty/misconnected/incorrectly mixed concentrates are common.',
+  tip:'“Low cond? Check the jugs.”' },
+
+{ id:9206, sec:'Machine',
+  stem:'Best step to prevent air embolism risk:',
+  choices:['Run higher BFR','Ensure air detector functional & venous chamber level correct','Use smaller dialyzer','Turn off alarms during cannulation'],
+  answer:1,
+  why:'Air detector + proper chamber level are key safeguards.',
+  tip:'“Air detector saves lives.”' },
+
+/* ---- Role / Infection Control ---- */
+{ id:9301, sec:'Role/IC',
+  stem:'Patient refuses to continue treatment. MOST appropriate response:',
+  choices:['Continue anyway for safety','Educate on risks, document refusal, notify RN/MD','Reduce UF secretly to compromise','Have another patient persuade them'],
+  answer:1,
+  why:'Respect autonomy; educate, document, escalate appropriately.',
+  tip:'“Teach, write, tell RN.”' },
+
+{ id:9302, sec:'Role/IC',
+  stem:'Best method for reporting a critical change to RN:',
+  choices:['Casual hallway chat','SBAR (Situation, Background, Assessment, Recommendation)','Text MD without RN awareness','Wait until shift change'],
+  answer:1,
+  why:'SBAR standardizes essential information for safe handoffs.',
+  tip:'“SBAR = speak smart.”' },
+
+{ id:9303, sec:'Role/IC',
+  stem:'Which task is within dialysis technician scope?',
+  choices:['Prescribe heparin','Diagnose access stenosis','Initiate/monitor treatment per orders; report abnormalities','Change provider orders in machine'],
+  answer:2,
+  why:'Techs perform ordered care and report; diagnosing/prescribing out of scope.',
+  tip:'“Do the ordered care; don’t order the care.”' },
+
+{ id:9304, sec:'Role/IC',
+  stem:'Confidentiality means you should:',
+  choices:['Discuss cases in public if de-identified','Share info only with staff involved in care','Share with family without consent','Post anonymized details online'],
+  answer:1,
+  why:'Limit disclosures to care team per policy/consent.',
+  tip:'“Need-to-know only.”' },
+
+{ id:9305, sec:'Role/IC',
+  stem:'Multiple pts need help. Who first?',
+  choices:['First come, first served','Most unstable/critical patient','Finish paperwork','Quiet patient last'],
+  answer:1,
+  why:'Prioritize by acuity for safety.',
+  tip:'“Sickest first.”' },
+
+{ id:9306, sec:'Role/IC',
+  stem:'After sharps needlestick exposure, FIRST step:',
+  choices:['Finish current task','Wash area, report immediately, follow exposure protocol','Apply bandage and ignore','Wait for symptoms'],
+  answer:1,
+  why:'Immediate washing & reporting → post-exposure management.',
+  tip:'“Wash → Report → Protocol.”' },
 ];
 
-function buildQuiz() {
-    const quizContainer = document.getElementById('quiz');
-    questions.forEach((q, i) => {
-        const div = document.createElement('div');
-        div.classList.add('question');
-        div.innerHTML = `<p><strong>Q${i+1}:</strong> ${q.question}</p>` +
-            q.options.map((opt, idx) => 
-                `<label><input type="radio" name="q${i}" value="${idx}"> ${opt}</label><br>`
-            ).join('');
-        quizContainer.appendChild(div);
-    });
+/* ========== Keys & State ========== */
+const WRONG_KEY='ccht_wrong_v2', STATS_KEY='ccht_stats_v2', HIST_KEY='ccht_hist_v2', SEC_KEY='ccht_sections_v2';
+let wrongSet=new Set(store.get(WRONG_KEY,[]));
+let stats=store.get(STATS_KEY,{answeredToday:0});
+let history=store.get(HIST_KEY,[]);
+let sectionPerf=store.get(SEC_KEY, {Clinical:{right:0,total:0},Water:{right:0,total:0},Machine:{right:0,total:0},"Role/IC":{right:0,total:0}});
+let session=null;
+
+/* ========== KPIs ========== */
+function refreshKPIs(){
+  $('#todayKpi').textContent=String(stats.answeredToday||0);
+  $('#weakKpi').textContent=String(wrongSet.size||0);
+  const last=history[history.length-1]; $('#bestKpi').textContent= last? `${Math.round((last.score||0)*100)}%` : '—';
 }
 
-function submitQuiz() {
-    let score = 0;
-    const resultsDiv = document.getElementById('results');
-    resultsDiv.innerHTML = '';
-    questions.forEach((q, i) => {
-        const selected = document.querySelector(`input[name="q${i}"]:checked`);
-        if (selected && parseInt(selected.value) === q.answer) {
-            score++;
-            resultsDiv.innerHTML += `<p>Q${i+1}: ✅ Correct! ${q.explanation}</p>`;
-        } else {
-            resultsDiv.innerHTML += `<p>Q${i+1}: ❌ Incorrect. ${q.explanation}</p>`;
-        }
+/* ========== Samplers ========== */
+function sampleDaily(){ return shuffle(Q.slice()).slice(0,10) }
+function sampleHard(){ // 40 total, weighted similar to exam
+  const by=groupBySec(Q); const out=[];
+  const plan=[['Clinical',22],['Water',9],['Machine',4],['Role/IC',5]];
+  plan.forEach(([s,n])=>{ out.push(...shuffle(by[s]||[]).slice(0,n)); });
+  return shuffle(out);
+}
+function sampleExam(){ // 150 if bank large; with 40 we recycle
+  const need=150, repeats=Math.ceil(need/Q.length);
+  const pool=[]; for(let i=0;i<repeats;i++) pool.push(...shuffle(Q.slice()));
+  return pool.slice(0,need);
+}
+function groupBySec(arr){ return arr.reduce((m,q)=>(m[q.sec]??=[]).push(q)&&m,{}); }
+
+/* ========== Session engine ========== */
+function startSession({mode,pool,timeLimit=null,showImmediate=true}){
+  session={mode,list:pool,index:0,correct:0,answers:[],start:Date.now(),timeLimit,ended:false,showImmediate};
+  $('#home').classList.add('hide'); $('#results').classList.add('hide'); $('#quiz').classList.remove('hide');
+  $('#modePill').textContent=mode; $('#qTotal').textContent=String(pool.length);
+  $('#timer').textContent=timeLimit?secondsToMMSS(timeLimit):'—';
+  $('#catPill').textContent='Mix'; showCurrent();
+  if(timeLimit){ const tick=()=>{ if(!session||session.ended)return; const left=timeLimit-Math.floor((Date.now()-session.start)/1000);
+    $('#timer').textContent=secondsToMMSS(Math.max(0,left)); if(left<=0){ finishSession(true); } else setTimeout(tick,1000) }; tick(); }
+}
+function showCurrent(){
+  const q=session.list[session.index];
+  $('#qNum').textContent=String(session.index+1);
+  $('#bar').style.width=((session.index)/session.list.length*100)+'%';
+  const area=$('#qArea'); area.innerHTML='';
+  const card=document.createElement('div');
+  card.innerHTML=`
+    <div class="q-stem">${q.stem}</div>
+    ${q.choices.map((c,i)=>`<div class="choice" data-i="${i}"><div class="badge">${String.fromCharCode(65+i)}</div><div>${c}</div></div>`).join('')}
+    <div class="explain small ${session.showImmediate?'':'hide'}" id="explain"><b>Why:</b> ${q.why}<br><b>Memory tip:</b> ${q.tip}</div>`;
+  area.appendChild(card);
+  const status=document.createElement('div'); status.id='status'; status.className='small muted'; status.style.marginTop='6px';
+  status.textContent=session.showImmediate?'Pick the single best answer — you’ll see the explanation right away.'
+                                         :'Practice exam mode — answers at the end.';
+  area.appendChild(status);
+
+  $$('#qArea .choice').forEach(ch=>ch.addEventListener('click',()=>{
+    if(ch.classList.contains('locked')) return;
+    const pick=Number(ch.dataset.i);
+    $$('#qArea .choice').forEach((n,i)=>{ n.classList.add('locked'); if(i===q.answer) n.classList.add('correct'); if(i===pick && i!==q.answer) n.classList.add('incorrect'); });
+    const correct = pick===q.answer;
+
+    // Record stats
+    stats.answeredToday+=1; store.set(STATS_KEY, stats);
+    sectionPerf[q.sec].total += 1; if(correct) sectionPerf[q.sec].right += 1;
+    store.set(SEC_KEY, sectionPerf);
+    if(!correct) wrongSet.add(q.id); else wrongSet.delete(q.id);
+    store.set(WRONG_KEY, Array.from(wrongSet));
+
+    // For exam mode, hide the explanation; otherwise show it
+    if(session.showImmediate){ $('#explain').classList.remove('hide'); $('#status').innerHTML = correct ? '✅ Correct' : `❌ Incorrect · Correct is <b>${String.fromCharCode(65+q.answer)}</b>`; }
+    else { $('#status').innerHTML = 'Answer recorded. Move on — explanations at the end.'; }
+
+    session.answers.push({id:q.id, pick, correct});
+  }));
+}
+function nextQuestion(){
+  if(!session) return;
+  if(session.answers.length<=session.index) return; // must answer first
+  if(session.index < session.list.length-1){ session.index++; showCurrent(); }
+  else { finishSession(false); }
+}
+function finishSession(timeUp){
+  session.ended=true;
+  const seconds = Math.floor((Date.now()-session.start)/1000);
+  const correct = session.answers.filter(a=>a.correct).length;
+  const total = session.list.length;
+  const score = correct/total;
+  history.push({mode:session.mode,score,time:seconds,total,when:Date.now()});
+  store.set(HIST_KEY, history);
+
+  // Results
+  $('#quiz').classList.add('hide'); $('#results').classList.remove('hide');
+  $('#scoreLine').textContent = `Score: ${Math.round(score*100)}% (${correct}/${total}) ${timeUp?'· Time up':''}`;
+  $('#kCorrect').textContent = `${correct}/${total}`; $('#kTime').textContent=secondsToMMSS(seconds); $('#kMode').textContent=session.mode;
+
+  // Section breakdown for this session
+  const secs=['Clinical','Water','Machine','Role/IC'];
+  const bySec={Clinical:{r:0,t:0},Water:{r:0,t:0},Machine:{r:0,t:0},"Role/IC":{r:0,t:0}};
+  session.list.forEach((q,i)=>{ const a=session.answers[i]; if(!a) return; bySec[q.sec].t++; if(a.correct) bySec[q.sec].r++; });
+  const wrap=$('#bySection'); wrap.innerHTML='<h3 style="margin-top:12px">Section Breakdown</h3>';
+  secs.forEach(s=>{
+    if(bySec[s].t===0) return;
+    const pct = Math.round(bySec[s].r/bySec[s].t*100);
+    const div=document.createElement('div'); div.className='small'; div.innerHTML=`<div class="badge">${s}</div> <b>${pct}%</b> (${bySec[s].r}/${bySec[s].t})`;
+    wrap.appendChild(div);
+  });
+
+  renderHistory();
+
+  // If exam mode: show explanations for review list
+  if(!session.showImmediate){
+    const review=document.createElement('div'); review.style.marginTop='14px';
+    review.innerHTML = '<h3>Review & Explanations</h3>';
+    session.list.forEach((q,i)=>{
+      const a=session.answers[i]; const tag = a && a.correct ? '✅' : '❌';
+      const block=document.createElement('div'); block.className='explain small';
+      block.innerHTML = `<div style="margin:6px 0"><b>${tag} Q${i+1}.</b> ${q.stem}</div>
+                         <div><b>Answer:</b> ${String.fromCharCode(65+q.answer)} — ${q.choices[q.answer]}</div>
+                         <div><b>Why:</b> ${q.why}</div>
+                         <div><b>Memory tip:</b> ${q.tip}</div>`;
+      review.appendChild(block);
     });
-    resultsDiv.innerHTML = `<h2>Your Score: ${score}/${questions.length}</h2>` + resultsDiv.innerHTML;
+    $('#results').appendChild(review);
+  }
+
+  session=null; refreshKPIs();
+}
+function goHome(){ $('#results').classList.add('hide'); $('#home').classList.remove('hide'); }
+function retry(){ goHome(); }
+
+/* ========== Weak Areas Booster ========== */
+function startBooster(){
+  // Find weakest 2 sections from stored performance
+  const scores = Object.entries(sectionPerf).map(([sec,v])=>[sec, v.total? (v.right/v.total):0 , v.total]);
+  scores.sort((a,b)=>a[1]-b[1]); // lowest first
+  const targets = scores.slice(0,2).map(s=>s[0]); // pick two weakest
+  // Build a pool from those sections
+  const pool = shuffle(Q.filter(q=>targets.includes(q.sec))).slice(0,20);
+  if(pool.length===0){ alert('No weak sections detected yet — do a session first.'); return; }
+  startSession({mode:`Booster (${targets.join(' + ')})`, pool, timeLimit:null, showImmediate:true});
 }
 
-buildQuiz();
+/* ========== History UI ========== */
+function renderHistory(){
+  const wrap=document.getElementById('histList'); if(!wrap) return; wrap.innerHTML='';
+  history.slice().reverse().slice(0,8).forEach(h=>{
+    const div=document.createElement('div'); div.className='item';
+    div.innerHTML=`<div class="badge">${h.mode}</div>
+      <div style="font-weight:700;margin-top:6px">${new Date(h.when).toLocaleString()}</div>
+      <div class="small">Score: <b>${Math.round((h.score||0)*100)}%</b> · Time: ${secondsToMMSS(h.time||0)} · Qs: ${h.total}</div>`;
+    wrap.appendChild(div);
+  });
+}
+
+/* ========== Wire buttons & init ========== */
+document.getElementById('btnDaily').addEventListener('click',()=> startSession({mode:'Daily Drill (10)', pool: sampleDaily(), timeLimit:null, showImmediate:true}));
+document.getElementById('btnHard').addEventListener('click',()=> startSession({mode:'Hard Mode (40)', pool: sampleHard(), timeLimit: 40*60, showImmediate:true}));
+document.getElementById('btnExam').addEventListener('click',()=> startSession({mode:'Full Practice Exam', pool: sampleExam(), timeLimit: 180*60, showImmediate:false}));
+document.getElementById('btnBooster').addEventListener('click', startBooster);
+document.getElementById('btnNext').addEventListener('click', nextQuestion);
+
+refreshKPIs();
 </script>
-
-</body>
-</html>
+</body></html>
