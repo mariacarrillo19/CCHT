@@ -1,0 +1,297 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CCHT Study Coach — v2.7 (randomized answers + no-repeat)</title>
+<style>
+:root{--bg:#0b1220;--card:#0f172a;--ink:#e5e7eb;--muted:#94a3b8;--pri:#60a5fa;--chip:#1f2937}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto}
+.container{max-width:1000px;margin:0 auto;padding:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.card{background:var(--card);border:1px solid #233047;border-radius:14px;padding:16px}
+h1{font-size:20px;margin:0 0 10px}
+button{background:var(--pri);color:#0b1220;border:none;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer}
+button.outline{background:transparent;border:1px solid var(--pri);color:#60a5fa}
+button:disabled{opacity:.5;cursor:not-allowed}
+.badge,.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:var(--chip);color:#e2e8f0;font-size:12px}
+.small{font-size:13px;color:#94a3b8}
+.hide{display:none}.list .item{padding:10px 0;border-top:1px solid #1e293b}
+.kpi{display:flex;gap:10px;flex-wrap:wrap}
+.kpi .cell{flex:1;min-width:180px;background:#0c1322;border:1px solid #1d2a3e;border-radius:12px;padding:12px}
+.q-stem{font-weight:700;margin:8px 0}
+.choice{display:flex;gap:10px;align-items:flex-start;border:1px solid #213047;border-radius:10px;padding:10px;margin:8px 0;cursor:pointer}
+.choice .badge{background:#111827}
+.choice.correct{border-color:#14532d;background:rgba(34,197,94,.1)}
+.choice.incorrect{border-color:#7f1d1d;background:rgba(239,68,68,.08)}
+.explain{margin-top:8px;border-left:3px solid #334155;padding-left:10px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.progress{height:8px;background:#111827;border-radius:999px;overflow:hidden}
+.progress>div{height:100%;width:0;background:var(--pri)}
+footer{color:#64748b;margin-top:16px;font-size:12px;text-align:center}
+hr.sep{border:0;border-top:1px solid #1e293b;margin:12px 0}
+ul.compact{margin:6px 0 0 18px;padding:0}
+</style>
+</head><body>
+<div class="container">
+
+  <div id="home" class="card">
+    <div class="topbar">
+      <div><h1>CCHT Study Coach</h1>
+        <div class="small">v2.7 · Practice no-repeat · Randomized answer positions · No more than 2 same letters in a row</div>
+      </div>
+      <span class="pill" id="modePill">Home</span>
+    </div>
+
+    <div class="row" style="margin:10px 0">
+      <button id="btnDaily">Daily Drill (10)</button>
+      <button id="btnPractice" class="outline">Practice (30)</button>
+      <button id="btnHard" class="outline">Hard Mode (60)</button>
+      <button id="btnExam" class="outline">Timed Exam (150)</button>
+      <button id="btnBooster" class="outline">Weak Areas Booster</button>
+      <button id="btnMissed" class="outline">Commonly Missed</button>
+    </div>
+
+    <div class="kpi">
+      <div class="cell"><div class="small">Today answered</div><div style="font-size:22px" id="todayKpi">0</div></div>
+      <div class="cell"><div class="small">Weak spots saved</div><div style="font-size:22px" id="weakKpi">0</div></div>
+      <div class="cell"><div class="small">Best recent</div><div style="font-size:22px" id="bestKpi">—</div></div>
+    </div>
+
+    <hr class="sep">
+    <div class="small"><b>How it randomizes now:</b> Choices are shuffled per question and the correct letter won't appear more than twice in a row.</div>
+  </div>
+
+  <div id="quiz" class="card hide">
+    <div class="topbar">
+      <div><span class="pill" id="catPill">Mix</span> <span class="pill" id="countPill"><span id="qNum">1</span>/<span id="qTotal">10</span></span></div>
+      <div class="pill" id="timer">—</div>
+    </div>
+    <div class="progress" style="margin:12px 0 6px"><div id="bar"></div></div>
+    <div id="qArea"></div>
+    <div class="row"><button id="btnNext" class="outline">Next →</button></div>
+  </div>
+
+  <div id="results" class="card hide">
+    <h1>Results</h1>
+    <div id="scoreLine" style="font-size:22px;margin-bottom:10px"></div>
+    <div class="kpi">
+      <div class="cell"><div class="small">Correct</div><div id="kCorrect" style="font-size:22px">0</div></div>
+      <div class="cell"><div class="small">Time</div><div id="kTime" style="font-size:22px">—</div></div>
+      <div class="cell"><div class="small">Mode</div><div id="kMode" style="font-size:22px">—</div></div>
+    </div>
+    <div id="bySection" style="margin-top:12px"></div>
+    <div id="byTopic" style="margin-top:12px"></div>
+    <h3 style="margin-top:14px">Recent Sessions</h3>
+    <div id="histList" class="list"></div>
+    <div class="row" style="margin-top:12px;"><button onclick="goHome()">Home</button><button class="outline" onclick="location.reload()">Reset</button></div>
+    <div class="small muted" style="margin-top:10px">App v2.7 (single-file)</div>
+  </div>
+
+  <footer>If your browser blocks saving, quizzes still work — streaks can’t persist.</footer>
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    "id": 101,
+    "sec": "Clinical",
+    "topic": "Emergencies",
+    "stem": "Air in venous chamber with chest pain and dyspnea: first action?",
+    "choices": [
+      "Stop UF",
+      "Clamp venous line and stop pump; left Trendelenburg; oxygen",
+      "Increase dialysate flow",
+      "Continue and observe"
+    ],
+    "answer": 1,
+    "why": "Treat as suspected air embolism.",
+    "terms": "Air embolism: intravascular air obstructing pulmonary flow.",
+    "wrong": [
+      "UF change alone won't stop air",
+      "\u2014",
+      "Not addressing air",
+      "Unsafe delay"
+    ],
+    "tip": "Clamp \u2022 Stop \u2022 Left \u2022 O2"
+  }
+];
+</script>
+<script>
+
+const APP_VERSION='2.7'; console.log('CCHT script version:', APP_VERSION);
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function secondsToMMSS(s){const m=Math.floor(s/60),ss=('0'+(s%60)).slice(-2);return `${m}:${ss}`}
+function storageAvailable(){try{const x='__t__';localStorage.setItem(x,x);localStorage.removeItem(x);return true}catch(e){return false}}
+const STORAGE_OK=storageAvailable();
+const store={get:(k,f)=>{if(!STORAGE_OK)return f;try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},
+             set:(k,v)=>{if(!STORAGE_OK)return;try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+
+const WRONG_KEY='ccht_wrong_v27', STATS_KEY='ccht_stats_v27', HIST_KEY='ccht_hist_v27', PERF_KEY='ccht_perf_v27', SEEN_KEY='ccht_seen_v27';
+let wrongSet=new Set(store.get(WRONG_KEY,[]));
+let stats=store.get(STATS_KEY,{answeredToday:0});
+let history=store.get(HIST_KEY,[]);
+let perf=store.get(PERF_KEY,{});
+let seenIDs=new Set(store.get(SEEN_KEY,[])); // no-repeat for Practice
+let session=null; let answeredThis=false;
+
+function ensurePerf(sec,topic){ if(!perf[sec]) perf[sec]={}; if(!perf[sec][topic]) perf[sec][topic]={right:0,total:0}; }
+function refreshKPIs(){ $('#todayKpi').textContent=String(stats.answeredToday||0); $('#weakKpi').textContent=String(wrongSet.size||0); const last=history[history.length-1]; $('#bestKpi').textContent= last? `${Math.round((last.score||0)*100)}%` : '—'; }
+
+// ---- De-dupe helpers ----
+function normStem(st){ return st.toLowerCase().replace(/[^\w\s]/g,'').replace(/\s+/g,' ').trim(); }
+function uniqueByStem(arr){ const seen=new Set(); const out=[]; for(const q of arr){ const k=normStem(q.stem); if(seen.has(k)) continue; seen.add(k); out.push(q);} return out; }
+
+// ---- Shuffle answers + anti-pattern across a session ----
+function shuffleAnswers(q){ const zip=q.choices.map((c,i)=>({c,i})); shuffle(zip); q._choices=zip.map(z=>z.c); q._answer=zip.findIndex(z=>z.i===q.answer); return q; }
+function balanceAnswerPositions(list){
+  const out=[]; const lastLetters=[]; // store indices 0..3 for last answers
+  list.forEach(q=>{
+    let tries=0;
+    while(tries<10){
+      shuffleAnswers(q);
+      const letter=q._answer; // 0..3
+      const L=lastLetters.length;
+      const bad = (L>=2 && lastLetters[L-1]===letter && lastLetters[L-2]===letter);
+      if(!bad) break;
+      tries++;
+    }
+    out.push(q);
+    lastLetters.push(q._answer);
+    if(lastLetters.length>2) lastLetters.shift();
+  });
+  return out;
+}
+
+// ---- Practice: no-repeat-until-all-seen ----
+function pickPractice(size=30){
+  let pool=(QUESTIONS||[]).filter(q=>!seenIDs.has(q.id));
+  if(pool.length===0){ seenIDs=new Set(); store.set(SEEN_KEY, Array.from(seenIDs)); pool=(QUESTIONS||[]).slice(); }
+  shuffle(pool); pool=uniqueByStem(pool);
+  const chosen = balanceAnswerPositions(pool).slice(0,size);
+  return chosen;
+}
+
+// ---- Other modes ----
+function pickMode(mode){
+  const base = uniqueByStem(shuffle((QUESTIONS||[]).slice()));
+  let size=10;
+  if(mode==='daily') size=10;
+  else if(mode==='practice') return pickPractice(30);
+  else if(mode==='hard') size=60;
+  else if(mode==='exam') size=150;
+  else if(mode==='booster') size=30;
+  else if(mode==='commonly-missed') size=30;
+
+  return balanceAnswerPositions(base).slice(0,size);
+}
+
+// ---- Commonly Missed ----
+const MISS_KEY='ccht_miss_v27'; let missCounts = store.get(MISS_KEY, {});
+const HIGH_MISS_TOPICS = new Set(['Chloramine','Concentrates','Monitoring','Emergencies','Endotoxin','System Layout','Pretreatment','Access','Infection Control','Safety','RO Mechanics','Hardness']);
+(function(){ if(Object.keys(missCounts).length) return; const candidates=QUESTIONS.filter(q=>HIGH_MISS_TOPICS.has(q.topic)); const take=candidates.slice(0,80); let weight=7; take.forEach((q,idx)=>{ const w=Math.max(2, weight - Math.floor(idx/16)); missCounts[q.id]=w; }); store.set(MISS_KEY, missCounts); })();
+function bumpMiss(id){ missCounts[id]=(missCounts[id]||0)+1; store.set(MISS_KEY, missCounts); }
+function pickCommonlyMissed(N=30){
+  const entries=Object.entries(missCounts).sort((a,b)=>(b[1]||0)-(a[1]||0));
+  const ids=entries.filter(e=>(e[1]||0)>0).map(e=>Number(e[0]));
+  let pool=(QUESTIONS||[]).filter(q=>ids.includes(q.id));
+  if(!pool.length){ pool=(QUESTIONS||[]).filter(q=>Array.from(wrongSet).includes(q.id)); }
+  if(!pool.length){ alert('No commonly missed questions yet — do a session first.'); return null; }
+  pool = uniqueByStem(shuffle(pool));
+  return balanceAnswerPositions(pool).slice(0,N);
+}
+
+// ---- Engine ----
+function startSession({mode,timeLimit=null,showImmediate=true}){
+  let list=null;
+  if(mode==='commonly-missed'){ list = pickCommonlyMissed(30); }
+  else { list = pickMode(mode); }
+  if(!list) return;
+  session={mode,list,index:0,answers:[],start:Date.now(),timeLimit,ended:false,showImmediate};
+  $('#home').classList.add('hide'); $('#results').classList.add('hide'); $('#quiz').classList.remove('hide');
+  $('#modePill').textContent=mode.toUpperCase(); $('#qTotal').textContent=String(list.length); $('#timer').textContent=timeLimit?secondsToMMSS(timeLimit):'—'; $('#catPill').textContent='Mix';
+  showCurrent();
+  if(timeLimit){
+    const tick=()=>{ if(!session||session.ended)return; const left=timeLimit-Math.floor((Date.now()-session.start)/1000);
+      $('#timer').textContent=secondsToMMSS(Math.max(0,left)); if(left<=0){ finishSession(true); } else setTimeout(tick,1000); }; tick();
+  }
+}
+
+function showCurrent(){
+  answeredThis=false; const nextBtn=$('#btnNext'); nextBtn.disabled=true; nextBtn.style.opacity=0.6;
+  const q=session.list[session.index]; $('#qNum').textContent=String(session.index+1); $('#bar').style.width=((session.index)/session.list.length*100)+'%';
+  const area=$('#qArea'); area.innerHTML='';
+  const choicesHtml=(q._choices||q.choices).map((c,i)=>`<div class="choice" data-i="${i}" role="button" tabindex="0"><div class="badge">${String.fromCharCode(65+i)}</div><div>${c}</div></div>`).join('');
+  area.innerHTML = `<div class="q-stem">${q.stem} <span class="pill" style="margin-left:6px">${q.sec}</span> <span class="pill" style="margin-left:6px">${q.topic}</span></div>${choicesHtml}
+    <div class="explain small ${session.showImmediate?'hide':''}" id="explain"><div><b>Why:</b> ${q.why}</div><div><b>Terms:</b> ${q.terms}</div><div><b>Why others are wrong:</b><ul class="compact">${(q.wrong||[]).map(w=>`<li>${w}</li>`).join('')}</ul></div><div><b>Memory tip:</b> ${q.tip}</div></div>`;
+  const status=document.createElement('div'); status.id='status'; status.className='small muted'; status.style.marginTop='6px'; status.textContent=session.showImmediate?'Select an answer to see the explanation, then tap Next.':'Practice exam mode — answers at the end.'; area.appendChild(status);
+  $$('#qArea .choice').forEach(ch=>ch.addEventListener('click',()=>{
+    if(ch.classList.contains('locked')) return;
+    const pick=Number(ch.dataset.i); const correctIndex=(q._answer!=null)?q._answer:q.answer;
+    $$('#qArea .choice').forEach((n,i)=>{ n.classList.add('locked'); if(i===correctIndex) n.classList.add('correct'); if(i===pick && i!==correctIndex) n.classList.add('incorrect'); });
+    const correct = pick===correctIndex;
+    stats.answeredToday+=1; store.set(STATS_KEY, stats); ensurePerf(q.sec,q.topic); perf[q.sec][q.topic].total += 1; if(correct) perf[q.sec][q.topic].right += 1; store.set(PERF_KEY, perf);
+    if(!correct){ wrongSet.add(q.id); bumpMiss(q.id); } else { wrongSet.delete(q.id); } store.set(WRONG_KEY, Array.from(wrongSet));
+    if(session.showImmediate){ $('#explain').classList.remove('hide'); $('#status').innerHTML = correct ? '✅ Correct' : `❌ Incorrect · Correct is <b>${String.fromCharCode(65+correctIndex)}</b>`; } else { $('#status').textContent='Answer recorded. Move on — explanations at the end.'; }
+    session.answers.push({id:q.id,pick,correct});
+    if(session.mode==='practice'){ seenIDs.add(q.id); store.set(SEEN_KEY, Array.from(seenIDs)); }
+    answeredThis=true; nextBtn.disabled=false; nextBtn.style.opacity=1;
+  }));
+}
+
+function nextQuestion(){ if(!session) return; if(!answeredThis){ alert('Please select an answer first.'); return; } if(session.index < session.list.length-1){ session.index++; showCurrent(); } else { finishSession(false); } }
+
+function finishSession(timeUp){
+  session.ended=true; const seconds=Math.floor((Date.now()-session.start)/1000); const correct = session.answers.filter(a=>a.correct).length; const total=session.list.length; const score=correct/total;
+  history.push({mode:session.mode,score,time:seconds,total,when:Date.now()}); store.set(HIST_KEY, history);
+  $('#quiz').classList.add('hide'); $('#results').classList.remove('hide');
+  $('#scoreLine').textContent=`Score: ${Math.round(score*100)}% (${correct}/${total}) ${timeUp?'· Time up':''}`;
+  $('#kCorrect').textContent=`${correct}/${total}`; $('#kTime').textContent=secondsToMMSS(seconds); $('#kMode').textContent=session.mode;
+  const bySec={}, byTopic={}; session.list.forEach((q,i)=>{ const a=session.answers[i]; if(!a) return; if(!bySec[q.sec]) bySec[q.sec]={r:0,t:0}; if(!byTopic[q.topic]) byTopic[q.topic]={r:0,t:0}; bySec[q.sec].t++; if(a.correct) bySec[q.sec].r++; byTopic[q.topic].t++; if(a.correct) byTopic[q.topic].r++; });
+  const secWrap=$('#bySection'); secWrap.innerHTML='<h3 style="margin-top:12px">Section Breakdown</h3>'; Object.keys(bySec).forEach(s=>{ const pct=Math.round(bySec[s].r/bySec[s].t*100); const div=document.createElement('div'); div.className='small'; div.innerHTML=`<div class="badge">${s}</div> <b>${pct}%</b> (${bySec[s].r}/${bySec[s].t})`; secWrap.appendChild(div); });
+  const topicWrap=$('#byTopic'); topicWrap.innerHTML='<h3 style="margin-top:12px">Topic Breakdown</h3>'; Object.keys(byTopic).forEach(t=>{ const pct=Math.round(byTopic[t].r/byTopic[t].t*100); const div=document.createElement('div'); div.className='small'; div.innerHTML=`<div class="badge">${t}</div> <b>${pct}%</b> (${byTopic[t].r}/${byTopic[t].t})`; topicWrap.appendChild(div); });
+  renderHistory();
+  if(!session.showImmediate){
+    const review=document.createElement('div'); review.style.marginTop='14px'; review.innerHTML='<h3>Review & Explanations</h3>';
+    session.list.forEach((q,i)=>{ const a=session.answers[i]; const correctIndex=(q._answer!=null)?q._answer:q.answer; const tag=a&&a.correct?'✅':'❌'; const block=document.createElement('div'); block.className='explain small'; const choices=(q._choices||q.choices);
+      block.innerHTML=`<div style="margin:6px 0"><b>${tag} Q${i+1}.</b> ${q.stem}</div><div><b>Answer:</b> ${String.fromCharCode(65+correctIndex)} — ${choices[correctIndex]}</div><div><b>Why:</b> ${q.why}</div><div><b>Terms:</b> ${q.terms}</div><div><b>Why others are wrong:</b><ul class="compact">${(q.wrong||[]).map(w=>`<li>${w}</li>`).join('')}</ul></div><div><b>Memory tip:</b> ${q.tip}</div>`; $('#results').appendChild(block); });
+  }
+  session=null; refreshKPIs();
+}
+
+function renderHistory(){ const wrap=document.getElementById('histList'); if(!wrap) return; wrap.innerHTML=''; history.slice().reverse().slice(0,8).forEach(h=>{ const div=document.createElement('div'); div.className='item'; div.innerHTML=`<div class="badge">${h.mode}</div><div style="font-weight:700;margin-top:6px">${new Date(h.when).toLocaleString()}</div><div class="small">Score: <b>${Math.round((h.score||0)*100)}%</b> · Time: ${secondsToMMSS(h.time||0)} · Qs: ${h.total}</div>`; wrap.appendChild(div); ...
+function renderTrend(){
+  const mount = document.getElementById('trendMount'); if(!mount) return;
+  const data = history.slice(-15).map(h=>Math.round((h.score||0)*100));
+  mount.innerHTML='';
+  if(data.length===0){ const p=document.createElement('div'); p.className='small muted'; p.textContent='No sessions yet — take a quiz to start your trend.'; mount.appendChild(p); return; }
+  const W=320,H=100,pad=8, max=100,min=0; const step=(W-2*pad)/Math.max(1,data.length-1); const y=v=> H-pad - ((v-min)/(max-min)*(H-2*pad));
+  const NS='http://www.w3.org/2000/svg'; const svg=document.createElementNS(NS,'svg'); svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.style.width='100%'; svg.style.maxWidth='360px';
+  const bg=document.createElementNS(NS,'rect'); bg.setAttribute('x','0'); bg.setAttribute('y','0'); bg.setAttribute('width',W); bg.setAttribute('height',H); bg.setAttribute('fill','#0c1322'); bg.setAttribute('rx','8'); svg.appendChild(bg);
+  const target=70; const line=document.createElementNS(NS,'line'); line.setAttribute('x1',pad); line.setAttribute('x2',W-pad); line.setAttribute('y1',y(target)); line.setAttribute('y2',y(target)); line.setAttribute('stroke','#475569'); line.setAttribute('stroke-dasharray','4 4'); svg.appendChild(line);
+  let d=''; data.forEach((v,i)=>{ const px=pad+i*step, py=y(v); d+=(i===0?`M ${px} ${py}`:` L ${px} ${py}`); });
+  const path=document.createElementNS(NS,'path'); path.setAttribute('d',d); path.setAttribute('fill','none'); path.setAttribute('stroke','#60a5fa'); path.setAttribute('stroke-width','2'); svg.appendChild(path);
+  data.forEach((v,i)=>{ const cx=pad+i*step, cy=y(v); const c=document.createElementNS(NS,'circle'); c.setAttribute('cx',cx); c.setAttribute('cy',cy); c.setAttribute('r','3'); c.setAttribute('fill','#60a5fa'); svg.appendChild(c); });
+  const lab=document.createElement('div'); lab.className='small muted'; lab.style.marginTop='6px'; lab.textContent=`Last ${data.length} sessions · Avg ${Math.round(data.reduce((a,b)=>a+b,0)/data.length)}% · Target 70%`; mount.appendChild(svg); mount.appendChild(lab);
+}
+
+function goHome(){ $('#results').classList.add('hide'); $('#home').classList.remove('hide'); }
+function retry(){ goHome(); }
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('btnDaily').addEventListener('click',()=> startSession({mode:'daily', timeLimit:null, showImmediate:true}));
+  document.getElementById('btnPractice').addEventListener('click',()=> startSession({mode:'practice', timeLimit:null, showImmediate:true}));
+  document.getElementById('btnHard').addEventListener('click',()=> startSession({mode:'hard', timeLimit:60*60, showImmediate:true}));
+  document.getElementById('btnExam').addEventListener('click',()=> startSession({mode:'exam', timeLimit:150*60, showImmediate:false}));
+  document.getElementById('btnBooster').addEventListener('click',()=> startSession({mode:'booster', timeLimit:null, showImmediate:true}));
+  document.getElementById('btnMissed').addEventListener('click',()=>{
+    const list=pickCommonlyMissed(30); if(!list) return;
+    session={mode:'commonly-missed',list,index:0,answers:[],start:Date.now(),timeLimit:null,ended:false,showImmediate:true};
+    $('#home').classList.add('hide'); $('#results').classList.add('hide'); $('#quiz').classList.remove('hide');
+    $('#modePill').textContent='COMMONLY MISSED'; $('#qTotal').textContent=String(list.length); $('#timer').textContent='—'; $('#catPill').textContent='Missed';
+    showCurrent();
+  });
+  document.getElementById('btnNext').addEventListener('click', nextQuestion);
+  refreshKPIs(); renderTrend();
+});
+
+</script>
+</body></html>
